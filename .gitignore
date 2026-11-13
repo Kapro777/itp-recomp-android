@@ -47,6 +47,9 @@ tools/venv/
 venv/
 __pycache__/
 .DS_Store
+# ---- local toolchain (JDK, Android SDK, downloads: scripts/setup_android_sdk.ps1)
+/toolchain/
+/dl/
 # ---- Android build output and local settings
 android/local.properties
 android/keystore.properties

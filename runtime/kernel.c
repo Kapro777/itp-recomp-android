@@ -755,7 +755,7 @@ static void svc_impl(Cpu *c, uint32_t imm, uint64_t pc) {
         case 14: v = STACK_BASE; break;
         case 15: v = STACK_SIZE; break;
         case 16: case 17: v = 0; break;
-        case 18: v = 0x01008CF01BAAC000ull; break;  // program id: Echoes of Wisdom
+        case 18: v = 0x010015F01C8EC000ull; break;  // program id: Five Nights at Freddy's: Into the Pit
         case 20: v = 0; break;
         // (Switchbrew SVC GetInfo: types newer SDKs may ask for)
         case 23: v = 1; break;            // IsApplication

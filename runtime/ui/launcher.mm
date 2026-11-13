@@ -87,7 +87,13 @@ static void save_png(id<MTLTexture> tex, const char *path) {
 }
 #endif
 
-static const uint8_t BUILD_ID[8] = {0xa5, 0x81, 0x40, 0x6b, 0xc9, 0x85, 0x86, 0x51};  // Echoes of Wisdom v1.0.0 main (docs/STATUS.md)
+// The build id of the game's main module (8 bytes at 0x40). All zeros = accept any build id: the ITP build
+// id is filled in from the dump (docs/PLAN-ITP.md, Marco 1).
+static const uint8_t BUILD_ID[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+static bool build_id_known() {
+    for (int i = 0; i < 8; i++) if (BUILD_ID[i]) return true;
+    return false;
+}
 // The release tag this build is (also names the release files; Makefile / tools/bundle_macos.sh / make_dmg.sh read
 // it): alpha_<n> while the game isn't playable, beta_<n> until 1.0, then v<major>.<minor>.<patch>.
 #define ITPRECOMP_VERSION "alpha_1"
@@ -185,7 +191,7 @@ static std::string check_copied_files(const std::string &root) {
     fseek(f, 0x40, SEEK_SET);
     size_t n = fread(id, 1, 8, f);
     fclose(f);
-    if (n != 8 || memcmp(id, BUILD_ID, 8)) return "Wrong game version (needs v1.0.0)";
+    if (n != 8 || (build_id_known() && memcmp(id, BUILD_ID, 8))) return "Wrong game version";
     // the data the game reads (services/fs.c): an image, or the description of where it is in the game package
     if (!file_exists(root + "/romfs.bin") && !file_exists(root + "/romfs.src")) return "Game data missing";
     return "";
@@ -281,7 +287,7 @@ static bool build_id_ok(const std::string &main_path) {
     fseek(f, 0x40, SEEK_SET);
     size_t n = fread(id, 1, 8, f);
     fclose(f);
-    return n == 8 && !memcmp(id, BUILD_ID, 8);
+    return n == 8 && (!build_id_known() || !memcmp(id, BUILD_ID, 8));
 }
 
 // progress (the overlay's bar): the romfs copy, then the image build - each about the size of romfs/
@@ -391,7 +397,7 @@ static void *extract_thread(void *) {
             set_job("Those files can't be used", true, why);
             goto done;
         }
-        if (tid != 0x01008CF01BAAC000ull || !build_id_ok(g_root + "/exefs/main")) {
+        if (tid != 0x010015F01C8EC000ull || !build_id_ok(g_root + "/exefs/main")) {
             rt_remove_game_files(g_root.c_str());
             set_failure(FAIL_VERSION);
             goto done;
@@ -999,7 +1005,7 @@ extern "C" void launcher_run(const char *root) {
     std::string status = check_game_files(g_root);
     if (status.empty()) load_background(dev);
     std::vector<std::string> seeds = list_seeds();
-    std::vector<std::string> choices = {"Echoes of Wisdom"};
+    std::vector<std::string> choices = {"Five Nights at Freddy's: Into the Pit"};
     choices.insert(choices.end(), seeds.begin(), seeds.end());
     int choice = 0;
     Page page = status.empty() ? MAIN : SETUP;
@@ -1056,7 +1062,7 @@ extern "C" void launcher_run(const char *root) {
         if (g_play_seed_req) {  // the Randomizer tab's Play: that seed, then PLAY as if pressed (first-launch questions)
             g_play_seed_req = false;
             seeds = list_seeds();
-            choices = {"Echoes of Wisdom"};
+            choices = {"Five Nights at Freddy's: Into the Pit"};
             choices.insert(choices.end(), seeds.begin(), seeds.end());
             choice = 0;
             for (size_t i = 0; i < seeds.size(); i++)
@@ -1317,7 +1323,7 @@ extern "C" void launcher_run(const char *root) {
                     page = MAIN, g_refocus = SETTINGS;
                     std::string cur = choices[choice];  // seeds made / renamed / deleted in the Randomizer tab
                     seeds = list_seeds();
-                    choices = {"Echoes of Wisdom"};
+                    choices = {"Five Nights at Freddy's: Into the Pit"};
                     choices.insert(choices.end(), seeds.begin(), seeds.end());
                     choice = 0;
                     for (size_t i = 0; i < choices.size(); i++)
@@ -1378,7 +1384,7 @@ extern "C" void launcher_run(const char *root) {
                     dl->AddLine(ImVec2(x, cy), ImVec2(x + u * 0.35f, cy + u * 0.35f), g, fs * 0.11f);
                     dl->AddLine(ImVec2(x + u * 0.35f, cy + u * 0.35f), ImVec2(x + u, cy - u * 0.4f), g, fs * 0.11f);
                 };
-                std::string src_d = "The folder with your own copy of The Legend of Zelda: Echoes of Wisdom for Nintendo "
+                std::string src_d = "The folder with your own copy of Five Nights at Freddy's: Into the Pit for Nintendo "
                                     "Switch, version 1.0.0: the .nsp or .xci with the prod.keys of your Switch beside it, "
                                     "or the extracted exefs / romfs folders. The game isn't included with ITPRecomp.";
                 if (!src.empty()) src_d += "\n\nChosen: " + (src.compare(0, 8, "android:") ? src : src.substr(8));
