@@ -3,6 +3,9 @@ name: Android APK
 # Compila o runtime (libmain.so) + SDL3 + deps e gera a APK "limpa" (sem nenhum arquivo do jogo).
 # O codigo recompilado do jogo e construido no proprio aparelho a partir dos arquivos do jogador
 # (ferramenta onDeviceBuild), entao este workflow nao precisa nem de game files.
+#
+# Repositorio publico = minutos de Actions ilimitados. O runner ja vem com o SDK do Android; aqui
+# instalamos so as versoes fixadas que o build usa.
 
 on:
   workflow_dispatch:
@@ -23,19 +26,27 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
-      - name: SDK packages (NDK 27.2, platform 36, build-tools)
+      - name: SDK packages (versoes fixadas)
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "ndk;27.2.12479018" "platforms;android-36" "build-tools;36.0.0" "platform-tools" "cmake;3.22.1"
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
+          echo "sdkmanager: $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;27.2.12479018" \
+            "cmake;3.22.1"
 
       - name: Cache das deps (SDL3, FFmpeg, shaderc, Vulkan headers, VMA, volk, Turnip)
         uses: actions/cache@v4
