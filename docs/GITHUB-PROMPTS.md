@@ -13,18 +13,33 @@ disparo de workflow, artefatos), te mando um prompt daqui para colar no seu agen
 
 ## P1 — Destravar o Actions (billing)
 
-> No repositório privado `Kapro777/itp-recomp-android`, os jobs do GitHub Actions não começam e o
-> erro é: *"The job was not started because recent account payments have failed or your spending
-> limit needs to be increased."*
+> **Resolvido em 2026-11-13:** o repo `Kapro777/itp-recomp-android` passou a ser **público**, e
+> repositórios públicos têm minutos de Actions ilimitados (a cota privada da conta gratuita é de
+> 2.000 min/mês). O job passou a rodar. O prompt abaixo só serve se o problema voltar (ex.: a conta
+> for configurada com limite de gasto zero).
+
+> No repositório `Kapro777/itp-recomp-android`, os jobs do GitHub Actions não começam e o erro é:
+> *"The job was not started because recent account payments have failed or your spending limit
+> needs to be increased."*
 >
 > 1. Verifique o estado do billing da conta `Kapro777` (Settings → Billing & plans; API:
->    `GET /users/Kapro777/settings/billing/actions`).
+>    `GET /users/Kapro777/settings/billing/actions` — precisa do escopo `user`:
+>    `gh auth refresh -h github.com -s user`).
 > 2. Se houver um **spending limit** em Actions zerado ou abaixo do necessário, aumente-o para o
 >    mínimo que rode o workflow (~1 h/mês de runner).
 > 3. Se o problema for **pagamento recusado**, me diga exatamente qual campo está pendente (cartão
 >    não cadastrado, cobrança falha, etc.) — **não** tentei cadastrar cartão sozinho.
 > 4. Depois, dispare o workflow: `gh workflow run android-apk.yml --repo Kapro777/itp-recomp-android`
 >    e me traga o status e o log da última execução.
+
+## P1b — Se o repo for derrubado (takedown)
+
+> O repositório público `Kapro777/itp-recomp-android` recebeu uma notificação de takedown.
+> 1. **Não** apague nada localmente; o espelho privado `Kapro777/itp-recomp-android-mirror` e o
+>    clone local guardam o histórico.
+> 2. Verifique com `git ls-files` que não há nenhum arquivo do jogo versionado (é a premissa do
+>    plano de contingência em `docs/LEGAL.md`).
+> 3. Me traga o texto exato da notificação e a URL afetada; **não** responda à notificação ainda.
 
 ## P2 — Rodar o workflow e trazer o log
 
