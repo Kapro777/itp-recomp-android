@@ -93,6 +93,28 @@ O notebook do usuário é um Celeron com 4 GB de RAM; cada arquivo do código re
   no CI se couber no limite de artefato;
 - **lift (gen.py)** → Python puro; roda no notebook mesmo (é lento, mas roda).
 
+**Contingência (2026-11-13):** o CI foi bloqueado por *billing* da conta do GitHub ("recent account
+payments have failed or your spending limit needs to be increased") — o job nem chegou a começar.
+Enquanto o usuário não resolver o billing (Settings → Billing & plans), o build local
+**MSYS2/UCRT64** (`scripts/setup_windows.ps1`: clang, lld, SDL3, FFmpeg, Vulkan, shaderc) cobre o
+runtime e o APK; o código do jogo continua sendo compilado no celular pelo próprio APK.
+
+## Ambiente de build
+
+| Componente | Onde | Comando |
+|---|---|---|
+| Toolchain Windows | MSYS2 UCRT64 (`scripts/setup_windows.ps1`) | `make -j` no shell UCRT64 |
+| venv do gerador | `tools/venv` (lz4, capstone, unicorn, cryptography) | `tools/venv/Scripts/python.exe -I tools/gen.py ...` |
+| APK (Android) | `android/gradlew assembleDebug` (precisa de `tools/android/build_deps.sh` antes) | `cd android && ./gradlew assembleDebug` |
+| Código do jogo | no celular, pelo APK (`-PonDeviceBuild=true`) ou `tools/android/build_game.sh <pasta>` | |
+| CI | `.github/workflows/android-apk.yml` (build da APK sem game files) | push em `main` |
+
+Testes que **não** precisam de arquivos do jogo (úteis antes do dump chegar):
+`tools/test_lift.py --synth` (lifter ARM64 contra o Unicorn, instrução a instrução),
+`tools/test_translate.sh` (tradutor de shaders), `tools/test_nxpkg.sh` (leitor de pacote).
+
+
+
 ## Riscos
 
 | Risco | Mitigação |
@@ -102,6 +124,7 @@ O notebook do usuário é um Celeron com 4 GB de RAM; cada arquivo do código re
 | `glslc` (subsdk0) chamado em runtime | HLE com shaderc, ou recompilar o módulo |
 | Memória: o heap do jogo é de 3,25 GB | Android precisa de RAM; lowering de resolução e texturas |
 | Shaders do Unity em formato não coberto pelo tradutor | ampliar `runtime/nvn/maxwell/translate.c` |
+| **Unity na Switch pode usar OpenGL ES em vez de NVN** | o LAS Recomp/EoWRecomp só cobrem NVN; o `nx2android` cobre os dois. Se o ITP for GLES, o caminho de render é outro (tradutor GLES→Vulkan em vez de NVN→Vulkan) |
 | Volume do dump (multi-GB) | nunca versionar; `.gitignore` já cobre `extracted/`, `generated/` |
 
 ## Registro de decisões
