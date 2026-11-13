@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Aviso legal / dúvidas sobre a licença
+    url: https://github.com/Kapro777/itp-recomp-android/blob/main/docs/LEGAL.md
+    about: BYOG, o que pode entrar no repo, licenças.

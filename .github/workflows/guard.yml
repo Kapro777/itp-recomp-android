@@ -1,0 +1,64 @@
+name: Guard (nenhum arquivo do jogo no repositorio)
+
+# Rede de seguranca do repo publico: falha se qualquer arquivo protegido do jogo, chave do console
+# ou codigo do jogo recompilado for versionado, ou se a politica legal sumir.
+# Roda em todo push e em todo PR. O repositorio publico nao pode conter nada do jogo.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  guard:
+    name: Guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checar arquivos e conteudo
+        run: |
+          set -uo pipefail
+          fail=0
+          err() { echo "::error::$1"; fail=1; }
+
+          # 1) nomes proibidos: dumps, exefs/romfs, chaves, gerados, build
+          if git ls-files | grep -Ei '(^|/)(exefs|romfs|extracted|input|generated|generated-[^/]*|build)/' \
+             | grep -v '^runtime/nvn/\|^runtime/romfs_build'; then
+            err "pasta de arquivos do jogo/build versionada (veja docs/LEGAL.md)"
+          fi
+          if git ls-files | grep -Ei '\.(nsp|xci|nsz|xcz|nca|ncz|nso|nro|npdm|bfres|bntx|bfstm|bfwav|bffnt|bfttf|sarc)$'; then
+            err "arquivo de jogo/asset versionado (veja docs/LEGAL.md)"
+          fi
+          if git ls-files | grep -Ei '(^|/)(prod|title|dev)\.keys$|\.keys$'; then
+            err "chave de console versionada (veja docs/LEGAL.md)"
+          fi
+
+          # 2) o codigo do jogo recompilado
+          if git ls-files | grep -Ei 'libitpgame\.(so|dll|dylib)$|gamelib\.so$'; then
+            err "codigo do jogo recompilado versionado (veja docs/LEGAL.md)"
+          fi
+
+          # 3) nenhum arquivo grande (um dump pesa GB)
+          git ls-files -z | xargs -0 -r ls -l 2>/dev/null | awk '$5 > 52428800 {print "  " $9 " (" $5 " bytes)"}' \
+            | while read -r line; do echo "arquivo grande versionado:$line"; done | tee /tmp/big.txt
+          [ -s /tmp/big.txt ] && err "arquivo grande versionado (dump?)"
+
+          # 4) linhas no formato das chaves do Switch (32 hex + '=')
+          if git grep -nIE '^[0-9A-Fa-f]{32}[[:space:]]*=' -- . | head -5 | grep -q .; then
+            err "linha no formato de chave do console encontrada em arquivo versionado"
+          fi
+
+          # 5) a politica legal e o aviso do README precisam continuar no repo
+          for f in docs/LEGAL.md README.md LICENSE; do
+            [ -f "$f" ] || { err "falta $f"; }
+          done
+          grep -qi 'BYOG\|cópia do próprio usuário\|sua própria cópia' README.md \
+            || err "README sem o aviso BYOG (veja docs/LEGAL.md)"
+
+          exit $fail

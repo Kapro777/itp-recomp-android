@@ -28,6 +28,18 @@ donos.
   você está fazendo — a responsabilidade é de quem executa, não de quem escreveu a ferramenta.
 - Nenhuma afiliação, vínculo comercial, conta ou conteúdo de terceiros é criada ou mantida aqui.
 
+Política completa do repositório (o que pode e o que não pode entrar, plano de contingência em caso
+de takedown, licenças): **[docs/LEGAL.md](docs/LEGAL.md)**.
+
+### Como isso é garantido
+
+| Garantia | Como |
+|---|---|
+| Nenhum arquivo do jogo no repo | workflow **Guard** (`.github/workflows/guard.yml`) falha o build em todo push/PR se aparecer dump, `exefs/`, `romfs/`, chave, asset ou o código recompilado |
+| `.gitignore` cobrindo o resto | `extracted/`, `generated/`, `build/`, `*.nsp`, `*.xci`, `*.keys`… |
+| Build do jogo fora do GitHub | o código do jogo é compilado **no aparelho do jogador** (dentro do APK); o CI só gera a APK "limpa" |
+| Histórico preservado se o repo cair | espelho privado `itp-recomp-android-mirror` + clone local (o repositório público é só a ferramenta) |
+
 ---
 
 ## Como funciona
@@ -82,5 +94,13 @@ Fase inicial: base importada e renomeada, aguardando o dump para começar o
 ## Aviso sobre a Nintendo e o GitHub
 
 Em fevereiro de 2026 a Nintendo derrubou 13 repositórios de emulador/recompilação hospedados no
-GitHub. Este repositório é privado durante o desenvolvimento. Se um dia for publicado, o conteúdo
-deve ser apenas o **código da ferramenta** — nunca arquivos, dados ou código extraído do jogo.
+GitHub. Este repositório é **público** (repositórios públicos têm minutos de Actions ilimitados e
+grátis; a cota gratuita da conta privada é de 2.000 min/mês) e contém **apenas a ferramenta**.
+Se ele for derrubado, nada se perde para o jogador: o app e o código do jogo continuam na máquina
+dele. O plano de contingência está em [docs/LEGAL.md](docs/LEGAL.md).
+
+## Ferramentas e procedência
+
+Todas as dependências externas são baixadas de fonte oficial, com versão fixada e hash conferido
+no próprio script. Registro completo: [docs/SOURCES.md](docs/SOURCES.md).
+

@@ -1,14 +1,16 @@
 # ITPRecomp — regras permanentes
 
-Recompilação estática de *The Legend of Zelda: Echoes of Wisdom* (Switch, 2024) para PC. Derivado do
-LASRecomp (MIT, https://github.com/peiikai/LASRecomp, commit base `d23597d`). Não é emulador: o ARM64 do jogo
+Recompilação estática de *Five Nights at Freddy's: Into the Pit* (Switch, 2024, Mega Cat Studios) para
+Android e PC. Derivado do LASRecomp (MIT, https://github.com/peiikai/LASRecomp, commit base `d23597d`) e do
+EoWRecomp (MIT, https://github.com/Nycolazs/EoWRecomp). Não é emulador: o ARM64 do jogo
 vira C em tempo de build; o runtime substitui o Horizon e a NVN. Arquitetura e plano: `docs/ARCHITECTURE.md`;
 estado atual e próximo passo: `docs/STATUS.md` (leia antes de começar).
 
 ## Arquivos da Nintendo
 - **Nenhum arquivo da Nintendo entra no repositório**: nada de `extracted/`, `generated/`, chaves, XCI/NSP/NCA/NSO,
   fontes do sistema, texturas, modelos, música, texto ou qualquer asset — nem "um arquivo só para teste".
-  O `.gitignore` cobre isso; confira com `git status --ignored` antes de cada commit.
+  O `.gitignore` cobre isso; o workflow **Guard** (`.github/workflows/guard.yml`) falha o build se algo
+  escapar. Confira com `git status --ignored` antes de cada commit.
   Exceção: capturas de tela do jogo rodando (`docs/screenshots/`, JPEG) para documentar o progresso, como faz o
   LASRecomp — nunca arquivos extraídos.
 - Os arquivos do usuário (XCI, `prod.keys`) ficam numa pasta própria, fora do repositório (o caminho local está na
@@ -17,8 +19,8 @@ estado atual e próximo passo: `docs/STATUS.md` (leia antes de começar).
   para esses arquivos.
 - Extração: `tools/nca_extract.py` (o hactool não lê o RomFS comprimido deste NCA) para `extracted/`
   (`exefs/`, `romfs/`). Uma cópia filtrada das chaves, se precisar, vai para o scratchpad, nunca para o repo.
-- Versão fixa: **title 01008CF01BAAC000, v0 (1.0.0)**, build IDs em `docs/STATUS.md`. Endereços de patches e HLE
-  valem só para ela.
+- Versão-alvo: **title 010015F01C8EC000** (Into the Pit). Endereços de patches e HLE valem só para a
+  versão medida — o build id fica em `docs/STATUS.md`.
 
 ## Código
 - Código gerado (`generated/`) nunca é editado à mão: mudanças vão em `tools/lifter.py`, `tools/gen.py` ou
