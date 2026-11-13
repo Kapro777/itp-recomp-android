@@ -1,8 +1,10 @@
 name: Android APK
 
-# Compila o runtime (libmain.so) + SDL3 + deps e gera a APK "limpa" (sem nenhum arquivo do jogo).
-# O codigo recompilado do jogo e construido no proprio aparelho a partir dos arquivos do jogador
-# (ferramenta onDeviceBuild), entao este workflow nao precisa nem de game files.
+# Gera as duas APKs, nenhuma delas contendo qualquer arquivo do jogo:
+#   1. app-debug.apk  - o runtime (libmain.so) + SDL3 + deps
+#   2. app-release.apk (on-device) - a mesma coisa + o kit que COMPILA O CODIGO DO JOGO NO CELULAR
+#      (Python + zig + o gerador dentro da APK): o jogador aponta a pasta do proprio jogo e o
+#      aparelho compila o codigo recompilado, sem nada passar pelo GitHub.
 #
 # Repositorio publico = minutos de Actions ilimitados. O runner ja vem com o SDK do Android; aqui
 # instalamos so as versoes fixadas que o build usa.
@@ -20,35 +22,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  apk:
-    name: APK (arm64-v8a)
+  deps:
+    name: Deps (SDL3, FFmpeg, shaderc, Vulkan, VMA, volk, Turnip)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
     steps:
       - uses: actions/checkout@v5
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
-
       - name: SDK packages (versoes fixadas)
         run: |
           set -euo pipefail
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
           SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
           [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
-          echo "sdkmanager: $SDKMANAGER"
           yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-36" \
-            "build-tools;36.0.0" \
-            "ndk;27.2.12479018" \
-            "cmake;3.22.1"
-
-      - name: Cache das deps (SDL3, FFmpeg, shaderc, Vulkan headers, VMA, volk, Turnip)
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" \
+            "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Cache das deps
         uses: actions/cache@v4
         with:
           path: |
@@ -57,20 +50,95 @@ jobs:
             build/android/work
             build/android/SDL3
           key: android-deps-${{ hashFiles('tools/android/build_deps.sh') }}
-          restore-keys: android-deps-
-
       - name: Deps
         env:
           ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
         run: bash tools/android/build_deps.sh
 
+  apk:
+    name: APK simples (sem o kit de build no aparelho)
+    needs: deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: SDK packages (versoes fixadas)
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" \
+            "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Cache das deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/android/deps
+            build/android/src
+            build/android/work
+            build/android/SDL3
+          key: android-deps-${{ hashFiles('tools/android/build_deps.sh') }}
+      - name: Deps
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+        run: bash tools/android/build_deps.sh
       - name: APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
-
-      - name: Upload da APK
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: itprecomp-apk-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+  apk-ondevice:
+    name: APK on-device (compila o codigo do jogo no celular)
+    needs: deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: SDK packages (versoes fixadas)
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          SDKMANAGER="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=$(find "$SDK/cmdline-tools" -name sdkmanager -type f | sort | tail -1)
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-36" "build-tools;36.0.0" \
+            "ndk;27.2.12479018" "cmake;3.22.1"
+      - name: Cache das deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/android/deps
+            build/android/src
+            build/android/work
+            build/android/SDL3
+          key: android-deps-${{ hashFiles('tools/android/build_deps.sh') }}
+      - name: Deps
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+        run: bash tools/android/build_deps.sh
+      - name: Kit de build no aparelho (Python 3.14 + zig + cckit do NDK)
+        env:
+          ANDROID_HOME: ${{ env.ANDROID_SDK_ROOT }}
+        run: bash tools/android/ondevice/build_all.sh
+      - name: APK
+        working-directory: android
+        run: ./gradlew assembleRelease -PonDeviceBuild=true --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: itprecomp-apk-ondevice
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
