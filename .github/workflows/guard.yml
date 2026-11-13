@@ -58,7 +58,9 @@ jobs:
           for f in docs/LEGAL.md README.md LICENSE; do
             [ -f "$f" ] || { err "falta $f"; }
           done
-          grep -qi 'BYOG\|cópia do próprio usuário\|sua própria cópia' README.md \
+          grep -qiE 'BYOG|própria cópia|own game' README.md \
             || err "README sem o aviso BYOG (veja docs/LEGAL.md)"
+          grep -q 'docs/LEGAL.md' README.md \
+            || err "README sem o link para docs/LEGAL.md"
 
           exit $fail

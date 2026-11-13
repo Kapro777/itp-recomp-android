@@ -18,9 +18,9 @@ donos.
 
 - **Nenhum arquivo do jogo está incluído** neste repositório, em nenhuma build, APK ou release —
   nem código, nem assets, nem dados, nem chaves.
-- **Quem usa é o dono da cópia.** Para jogar você precisa da sua **própria cópia legítima** do jogo
-  (o seu arquivo `.nsp`/`.xci`, extraído do **seu** Switch) e das **suas** `prod.keys`. O app
-  apenas lê o que você aponta para ele.
+- **Quem usa é o dono da cópia (BYOG — *bring your own game*).** Para jogar você precisa da sua
+  **própria cópia legítima** do jogo (o seu arquivo `.nsp`/`.xci`, extraído do **seu** Switch) e das
+  **suas** `prod.keys`. O app apenas lê o que você aponta para ele.
 - **Nada disso deve ser redistribuído.** O APK "limpo" (sem código do jogo) pode ser compartilhado;
   o código recompilado do jogo, os dumps, as chaves e os saves são seus e só seus.
 - Este software é distribuído "como está", sem garantia de nenhum tipo. A responsabilidade pelo
