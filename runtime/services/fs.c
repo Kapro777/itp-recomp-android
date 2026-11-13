@@ -373,7 +373,7 @@ static void storage(Service *s, IpcReq *req, IpcResp *resp) {
             static const char *last;
             if (path && path != last) {
                 last = path;
-                if (getenv("EOWRECOMP_LOG_FILES")) LOG("[fs] read %s\n", path);
+                if (getenv("ITPRECOMP_LOG_FILES")) LOG("[fs] read %s\n", path);
             }
         }
         static uint64_t reads, bytes;
@@ -592,7 +592,7 @@ static void filesystem(Service *s, IpcReq *req, IpcResp *resp) {
 
 static Service *open_host_fs(const char *sub) {
     HostFs *fs = calloc(1, sizeof *fs);
-    if (getenv("EOWRECOMP_SAVE_DIR")) g_save_dir = getenv("EOWRECOMP_SAVE_DIR");  // test runs use a scratch copy
+    if (getenv("ITPRECOMP_SAVE_DIR")) g_save_dir = getenv("ITPRECOMP_SAVE_DIR");  // test runs use a scratch copy
     else if (mod_dir()) {  // a mod folder has its own save slots
         static char seed_save[600];
         snprintf(seed_save, sizeof seed_save, "%s/save", mod_dir());

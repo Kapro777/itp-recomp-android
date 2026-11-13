@@ -7,7 +7,7 @@
 //   .75x / .50x / .25x  of Match display (scaled up to the window - with MetalFX on macOS when chosen)
 //   Dynamic        Match display, lowered in steps while the GPU can't hold 60 fps and raised again when it can
 //                  (each change reallocates the render targets: a short hitch, so it changes rarely, with hysteresis)
-// Test overrides: EOWRECOMP_SCALE=<f> (render height = 1080 x f), EOWRECOMP_WIDE_TEST=<f> (forced shape).
+// Test overrides: ITPRECOMP_SCALE=<f> (render height = 1080 x f), ITPRECOMP_WIDE_TEST=<f> (forced shape).
 #include <math.h>
 #include <stdlib.h>
 
@@ -60,8 +60,8 @@ double output_scale_dynamic_factor(void) { return g_dyn; }
 void output_scale(double dw, double dh, bool reshape_allowed, double now, double gpu_ms, OutScale *o) {
     double fit = fmin(dw / 1920.0, dh / 1080.0);
     static double forced = -1, wide_test = -1;
-    if (forced < 0) forced = getenv("EOWRECOMP_SCALE") ? atof(getenv("EOWRECOMP_SCALE")) : 0;
-    if (wide_test < 0) wide_test = getenv("EOWRECOMP_WIDE_TEST") ? atof(getenv("EOWRECOMP_WIDE_TEST")) : 0;
+    if (forced < 0) forced = getenv("ITPRECOMP_SCALE") ? atof(getenv("ITPRECOMP_SCALE")) : 0;
+    if (wide_test < 0) wide_test = getenv("ITPRECOMP_WIDE_TEST") ? atof(getenv("ITPRECOMP_WIDE_TEST")) : 0;
     double shape = wide_test > 0 ? wide_test : (dw / dh) / (16.0 / 9.0);
     bool reshape = reshape_allowed && fabs(shape - 1.0) > 0.005;
     if (!reshape) shape = 1.0;

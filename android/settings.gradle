@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "eowrecomp"
+rootProject.name = "itprecomp"
 include ':app'

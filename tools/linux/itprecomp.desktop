@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=EoWRecomp
+Name=ITPRecomp
 Comment=The Legend of Zelda: Link's Awakening, recompiled (bring your own game files)
-Exec=eowrecomp
-Icon=eowrecomp
+Exec=itprecomp
+Icon=itprecomp
 Categories=Game;
 Terminal=false

@@ -1,4 +1,4 @@
-// The Java side of the Android app (android/app/src/main/java/com/eowrecomp/android/EowActivity.java): calls into it
+// The Java side of the Android app (android/app/src/main/java/com/itprecomp/android/ItpActivity.java): calls into it
 // through SDL's JNI environment and activity, and its native methods. (After LASRecomp-Android-Plus, MIT.)
 #include <SDL3/SDL.h>
 #include <jni.h>
@@ -9,7 +9,7 @@
 
 static void (*g_pick_cb)(const char *name);
 
-// A static method of the activity's class (EowActivity: GetObjectClass works on any thread, FindClass of an app class
+// A static method of the activity's class (ItpActivity: GetObjectClass works on any thread, FindClass of an app class
 // only on Java's own)
 static jmethodID activity_method(JNIEnv **env, jclass *cls, const char *name, const char *sig) {
     *env = (JNIEnv *)SDL_GetAndroidJNIEnv();
@@ -85,7 +85,7 @@ int android_open_document(const char *uri) {
     return fd;
 }
 
-// ---- building the game code on the phone (EowActivity.buildTools / BuildService)
+// ---- building the game code on the phone (ItpActivity.buildTools / BuildService)
 const char *android_build_tools(void) {
     static char dir[1024];
     JNIEnv *env;
@@ -123,7 +123,7 @@ void android_build_progress(int percent, const char *text) {
     (*env)->DeleteLocalRef(env, cls);
 }
 
-JNIEXPORT void JNICALL Java_com_eowrecomp_android_EowActivity_nativeFolderPicked(JNIEnv *env, jclass cls, jstring name) {
+JNIEXPORT void JNICALL Java_com_itprecomp_android_ItpActivity_nativeFolderPicked(JNIEnv *env, jclass cls, jstring name) {
     (void)cls;
     const char *s = name ? (*env)->GetStringUTFChars(env, name, NULL) : NULL;
     if (g_pick_cb) g_pick_cb(s);

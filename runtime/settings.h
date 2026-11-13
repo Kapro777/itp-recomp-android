@@ -1,12 +1,12 @@
-// User settings (eowrecomp.ini next to the executable's working directory), edited from the in-game menu.
+// User settings (itprecomp.ini next to the executable's working directory), edited from the in-game menu.
 #pragma once
 #include <stdbool.h>
 
 enum { ASPECT_UNLOCKED = 0, ASPECT_ORIGINAL = 1 };
 enum { RES_MATCH = 0, /* 1..8 = 1x..8x */ RES_DYNAMIC = 9, RES_Q75 = 10, RES_Q25 = 11, RES_Q50 = 12 };
-// (11 was 67% of the display: eowrecomp.ini "67%" now loads as RES_Q75)
+// (11 was 67% of the display: itprecomp.ini "67%" now loads as RES_Q75)
 enum { UPSCALE_BILINEAR = 0, UPSCALE_METALFX = 1 /* macOS */, UPSCALE_FSR1 = 2 /* Windows: AMD FSR 1 */ };
-#ifdef EOW_METAL
+#ifdef ITP_METAL
 #define UPSCALE_SHARP UPSCALE_METALFX  // each OS's non-bilinear upscaler (the default)
 #else
 #define UPSCALE_SHARP UPSCALE_FSR1

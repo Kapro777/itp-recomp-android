@@ -1,7 +1,7 @@
 #!/bin/bash
 # tools/android/ondevice/build_python.sh: the generator's Python for building the game code ON the phone
 # (docs/BUILD-android.md), made on this computer with the NDK. Into build/ondevice/stage/:
-#   jniLibs/arm64-v8a/  libeowpython.so (the `python` program, tools/android/ondevice/pylauncher.c), libpython3.14.so,
+#   jniLibs/arm64-v8a/  libitppython.so (the `python` program, tools/android/ondevice/pylauncher.c), libpython3.14.so,
 #                       libcapstone.so (ARM64 only), libunicorn.so (aarch64 only)
 #   pyhome/lib/python3.14/  CPython's standard library (trimmed) + lib-dynload/ + site-packages/ (capstone, unicorn,
 #                           lz4 with its C extensions built here)
@@ -64,14 +64,14 @@ PKG_CONFIG=/usr/bin/false cmake --build $B/obj/unicorn -j$JOBS >> $B/obj/unicorn
 O=$B/stage
 L=$O/jniLibs/arm64-v8a
 H=$O/pyhome/lib/python3.14
-rm -rf $O/pyhome $L/libeowpython.so $L/libpython3.14.so $L/libcapstone.so $L/libunicorn.so  # (its own: not libzig.so, cckit/)
+rm -rf $O/pyhome $L/libitppython.so $L/libpython3.14.so $L/libcapstone.so $L/libunicorn.so  # (its own: not libzig.so, cckit/)
 mkdir -p $L $H/site-packages
 cp $(find $B/obj/capstone -name 'libcapstone.so*' -type f | head -1) $L/libcapstone.so
 cp $(find $B/obj/unicorn -name 'libunicorn.so*' -type f | head -1) $L/libunicorn.so
 cp $PY/lib/libpython3.14.so $L/
 
-echo "== libeowpython.so (the python program)"
-"$CC" -O2 -fPIE -pie -I$PYINC tools/android/ondevice/pylauncher.c -o $L/libeowpython.so -L$L -lpython3.14 \
+echo "== libitppython.so (the python program)"
+"$CC" -O2 -fPIE -pie -I$PYINC tools/android/ondevice/pylauncher.c -o $L/libitppython.so -L$L -lpython3.14 \
       -Wl,-z,max-page-size=16384 '-Wl,-rpath,$ORIGIN'  # (libpython beside it: no LD_LIBRARY_PATH in the app)
 
 echo "== lz4 C extensions"

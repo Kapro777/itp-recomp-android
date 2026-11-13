@@ -1,10 +1,10 @@
 #!/bin/bash
 # tools/linux/package.sh <x86_64|aarch64> (inside the amd64 build container, tools/linux/appimage.sh): the game built
 # against build/linux/<arch>/deps and the seed generator helper (tools/linux/rando_helper.sh) put together
-# as an AppDir and packed by appimagetool: build/dist/EoWRecomp-<version>-linux-<arch>.AppImage
+# as an AppDir and packed by appimagetool: build/dist/ITPRecomp-<version>-linux-<arch>.AppImage
 # (named like the macOS / Windows releases; GitHub shows it as LAS.Recomp-<version>-linux-<arch>.AppImage).
 # Shipped next to the executable (usr/bin, where runtime/paths.c rt_resource looks): rando-gen/, what the start screen
-# builds the game code with on the player's machine (runtime/gamebuild.c: eowgen/, zig/ from tools/fetch_zig.sh,
+# builds the game code with on the player's machine (runtime/gamebuild.c: itpgen/, zig/ from tools/fetch_zig.sh,
 # gamelib-src/), the window icon, the start screen font. No game code: that's built from the player's own files. usr/lib: the libraries from deps/ only - glibc, libstdc++, the Vulkan loader and the
 # GPU drivers are the system's (a bundled loader would not find the user's drivers). No game files or fonts.
 set -euo pipefail
@@ -14,8 +14,8 @@ L=$PWD/build/linux/$ARCH
 P=$L/deps
 B=$L/game
 APPDIR=$L/AppDir
-VERSION=$(sed -n 's/^#define EOWRECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
-OUT="build/dist/EoWRecomp-$VERSION-linux-$ARCH.AppImage"
+VERSION=$(sed -n 's/^#define ITPRECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
+OUT="build/dist/ITPRecomp-$VERSION-linux-$ARCH.AppImage"
 JOBS=$(nproc)
 
 tools/linux/build_deps.sh "$ARCH"
@@ -30,33 +30,33 @@ else
 fi
 
 # the app alone (the game code is built on the player's machine)
-make -j"$JOBS" B="$B" DEPS="$P" SHADERC=-lshaderc_shared "${MAKEARGS[@]}" "$B/eowrecomp"
-if nm "$B/eowrecomp" | grep ' f_70' >/dev/null; then echo "$B/eowrecomp has game code linked in"; exit 1; fi
+make -j"$JOBS" B="$B" DEPS="$P" SHADERC=-lshaderc_shared "${MAKEARGS[@]}" "$B/itprecomp"
+if nm "$B/itprecomp" | grep ' f_70' >/dev/null; then echo "$B/itprecomp has game code linked in"; exit 1; fi
 ZIG_TARGET=$ARCH-linux tools/fetch_zig.sh
 
 # ---- AppDir
 rm -rf "$APPDIR" && mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
-cp "$B/eowrecomp" "$APPDIR/usr/bin/"
-llvm-strip --strip-debug "$APPDIR/usr/bin/eowrecomp"  # (symbols stay: crash backtraces name functions)
+cp "$B/itprecomp" "$APPDIR/usr/bin/"
+llvm-strip --strip-debug "$APPDIR/usr/bin/itprecomp"  # (symbols stay: crash backtraces name functions)
 cp docs/icon/icon_1024.png "$APPDIR/usr/bin/icon.png"
 cp third_party/fonts/Baloo2/Baloo2-SemiBold.ttf "$APPDIR/usr/bin/"  # (start screen font, OFL)
 cp third_party/fonts/Baloo2/OFL.txt "$APPDIR/usr/bin/Baloo2-OFL.txt"
 cp README.md LICENSE "$APPDIR/usr/bin/"  # (licenses and source links of the bundled components: README "License")
 [ -d "$L/helper/rando-gen" ] || { echo "no seed generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
 cp -R "$L/helper/rando-gen" "$APPDIR/usr/bin/"
-[ -d "$L/helper/eowgen" ] || { echo "no game code generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
-cp -R "$L/helper/eowgen" build/zig "$APPDIR/usr/bin/"
+[ -d "$L/helper/itpgen" ] || { echo "no game code generator helper: tools/linux/rando_helper.sh $ARCH first"; exit 1; }
+cp -R "$L/helper/itpgen" build/zig "$APPDIR/usr/bin/"
 mkdir "$APPDIR/usr/bin/gamelib-src"
 cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
    "$APPDIR/usr/bin/gamelib-src/"
 cp tools/linux/AppRun "$APPDIR/" && chmod +x "$APPDIR/AppRun"
-cp tools/linux/eowrecomp.desktop "$APPDIR/"
-cp docs/icon/icon_1024.png "$APPDIR/eowrecomp.png" && ln -sf eowrecomp.png "$APPDIR/.DirIcon"
+cp tools/linux/itprecomp.desktop "$APPDIR/"
+cp docs/icon/icon_1024.png "$APPDIR/itprecomp.png" && ln -sf itprecomp.png "$APPDIR/.DirIcon"
 
-# libraries: what eowrecomp needs (DT_NEEDED, recursively) that deps/ provides; anything else must be a system one
+# libraries: what itprecomp needs (DT_NEEDED, recursively) that deps/ provides; anything else must be a system one
 needed() { readelf -d "$1" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'; }
 SYSTEM_LIBS='^(libc|libm|libdl|libpthread|librt|libresolv|libstdc\+\+|libgcc_s|libvulkan)\.so|^ld-linux'
-todo=("$APPDIR/usr/bin/eowrecomp")
+todo=("$APPDIR/usr/bin/itprecomp")
 while [ ${#todo[@]} -gt 0 ]; do
     f=${todo[0]}; todo=("${todo[@]:1}")
     for n in $(needed "$f"); do
@@ -70,7 +70,7 @@ while [ ${#todo[@]} -gt 0 ]; do
         fi
     done
 done
-patchelf --set-rpath '$ORIGIN/../lib' "$APPDIR/usr/bin/eowrecomp"
+patchelf --set-rpath '$ORIGIN/../lib' "$APPDIR/usr/bin/itprecomp"
 if ls "$APPDIR/usr/lib" | grep -iE 'x264|x265|xvid|postproc|vulkan'; then  # (no GPL codecs, no Vulkan loader)
     echo "package: library that must not ship"; exit 1
 fi

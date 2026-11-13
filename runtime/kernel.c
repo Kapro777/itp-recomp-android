@@ -78,7 +78,7 @@ uint64_t rt_ticks(void) {
     // 19.2 MHz system tick
     uint64_t ns = plat_now_ns();
     static double scale = -1;
-    if (scale < 0) scale = getenv("EOWRECOMP_TICK_SCALE") ? atof(getenv("EOWRECOMP_TICK_SCALE")) : 1.0;
+    if (scale < 0) scale = getenv("ITPRECOMP_TICK_SCALE") ? atof(getenv("ITPRECOMP_TICK_SCALE")) : 1.0;
     if (scale != 1.0) ns = (uint64_t)(ns * scale);
     return (uint64_t)((__uint128_t)ns * 192 / 10000);
 }
@@ -465,7 +465,7 @@ static uint32_t svc_wait_synchronization(uint64_t handles_ptr, int32_t count, in
     KThread *t = t_cur;
     uint32_t *hs = (uint32_t *)(uintptr_t)handles_ptr;
     uint32_t r;
-    if (ENV("EOWRECOMP_VSYNC_BT")) {  // (debug) who waits for the display's vsync event: the game's frame loop
+    if (ENV("ITPRECOMP_VSYNC_BT")) {  // (debug) who waits for the display's vsync event: the game's frame loop
         extern uint32_t vi_vsync_handle(void);
         static int shown;
         for (int i = 0; i < count && shown < 2; i++)
@@ -521,7 +521,7 @@ void rt_svc(Cpu *c, uint32_t imm, uint64_t pc) {
 }
 
 static void svc_entry(Cpu *c, uint32_t imm, uint64_t pc) {
-    if (prof_svc < 0) prof_svc = ENV("EOWRECOMP_PROF_SVC") != NULL;
+    if (prof_svc < 0) prof_svc = ENV("ITPRECOMP_PROF_SVC") != NULL;
     if (prof_svc && imm < 0x80) {
         uint64_t a0 = c->x[0], a1 = c->x[1], a2 = c->x[2], a3 = c->x[3], lr = c->x[30];
         uint32_t h0 = imm == 0x18 && a2 ? *(uint32_t *)(uintptr_t)a1 : 0;
@@ -554,7 +554,7 @@ static void svc_entry(Cpu *c, uint32_t imm, uint64_t pc) {
         }
         return;
     }
-    if (trace_svc < 0) trace_svc = getenv("EOWRECOMP_TRACE_SVC") != NULL;
+    if (trace_svc < 0) trace_svc = getenv("ITPRECOMP_TRACE_SVC") != NULL;
     if (!trace_svc) return svc_impl(c, imm, pc);
     uint64_t in[4] = {c->x[0], c->x[1], c->x[2], c->x[3]};
     svc_impl(c, imm, pc);
@@ -786,7 +786,7 @@ static void svc_impl(Cpu *c, uint32_t imm, uint64_t pc) {
         x[0] = R_OK;
         x[1] = kernel_new_handle(ev);
         x[2] = kernel_new_handle(ev);
-        if (ENV("EOWRECOMP_PROF_SVC")) LOG("[evt] guest w=%llx r=%llx lr=%llx\n", (unsigned long long)x[1], (unsigned long long)x[2], (unsigned long long)x[30]);
+        if (ENV("ITPRECOMP_PROF_SVC")) LOG("[evt] guest w=%llx r=%llx lr=%llx\n", (unsigned long long)x[1], (unsigned long long)x[2], (unsigned long long)x[30]);
         break;
     }
     default:
@@ -862,7 +862,7 @@ KEvent *kernel_create_event_pair(uint32_t *w, uint32_t *r) {
     ev->type = KOBJ_EVENT;
     *w = kernel_new_handle(ev);
     *r = kernel_new_handle(ev);
-    if (ENV("EOWRECOMP_PROF_SVC")) { const char *s = plat_symbol((uint64_t)(uintptr_t)__builtin_return_address(0), NULL); LOG("[evt] hle w=%x r=%x from %s\n", *w, *r, s ? s : "?"); }
+    if (ENV("ITPRECOMP_PROF_SVC")) { const char *s = plat_symbol((uint64_t)(uintptr_t)__builtin_return_address(0), NULL); LOG("[evt] hle w=%x r=%x from %s\n", *w, *r, s ? s : "?"); }
     return ev;
 }
 

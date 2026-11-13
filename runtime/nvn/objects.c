@@ -149,10 +149,10 @@ void renderer_flush(void);
 NVN(nvnSyncWait) {  // NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED
     static int flush = -1;
     static uint64_t n;
-    if (flush < 0) flush = getenv("EOWRECOMP_SYNC_FLUSH") ? 1 : 0;
-    if (getenv("EOWRECOMP_LOG_SYNC") && n++ % 60 == 0) LOG("[nvn] SyncWait #%llu (lr %llx)\n", (unsigned long long)n, c->x[30]);
-    static int whole = -1;  // EOWRECOMP_SYNC_ALL=1: old behaviour, wait for all submitted work
-    if (whole < 0) whole = getenv("EOWRECOMP_SYNC_ALL") ? 1 : 0;
+    if (flush < 0) flush = getenv("ITPRECOMP_SYNC_FLUSH") ? 1 : 0;
+    if (getenv("ITPRECOMP_LOG_SYNC") && n++ % 60 == 0) LOG("[nvn] SyncWait #%llu (lr %llx)\n", (unsigned long long)n, c->x[30]);
+    static int whole = -1;  // ITPRECOMP_SYNC_ALL=1: old behaviour, wait for all submitted work
+    if (whole < 0) whole = getenv("ITPRECOMP_SYNC_ALL") ? 1 : 0;
     if (flush) renderer_flush();
     else if (whole) renderer_sync();
     else renderer_wait_seq(sync_of(A(0))->seq);  // only the submission that holds this fence
@@ -332,7 +332,7 @@ static void builder_layout(uint64_t b, TexLayout *t) {
     // from the driver default: NVNpackagedTextureLayout's low word is log2(GOBs per block).
     uint64_t pl = G(uint64_t, b, 0x50);
     if (pl && (uint32_t)pl <= 5) t->block_height_log2 = (uint32_t)pl;
-    if (pl && getenv("EOWRECOMP_LOG_PACKAGED")) {
+    if (pl && getenv("ITPRECOMP_LOG_PACKAGED")) {
         static int n;
         if (n++ < 4000) LOG("[nvn] packaged layout %016llx fmt %#x %ux%u lv %u -> default bh %u\n", pl, G(uint32_t, b, 0x20), t->width, t->height, t->levels, t->block_height_log2);
     }

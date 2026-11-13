@@ -443,7 +443,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     buffer_size = buffer_size_aligned;
 }
 
-// LAS Recomp / EoWRecomp (from LASRecomp-Android-Plus): a pre-rotated swapchain (Android, the panel's own orientation) - everything drawn turned by quarter turns
+// LAS Recomp / ITPRecomp (from LASRecomp-Android-Plus): a pre-rotated swapchain (Android, the panel's own orientation) - everything drawn turned by quarter turns
 // (1: clip space (-y, x), 3: (y, -x)) through a vertex shader with the turn in its push constants (set before Init).
 static int g_LasQuarter = 0;
 static const uint32_t* g_LasVertSpv = nullptr;

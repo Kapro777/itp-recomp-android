@@ -55,7 +55,7 @@ cp "${RES}lib/linux/libclang_rt.builtins-aarch64-android.a" $O/clang/lib/
 cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h runtime/modules.h tools/gamelib_entry.c \
    runtime/hle/hle_symbols.txt $O/gamelib-src/
 # the link (tools/android/build_game.sh), as NDK clang runs ld.lld for it. On the phone:
-#   libzig.so ld.lld @cckit/link.rsp -o libeowgame.so cckit/sysroot/usr/lib/aarch64-linux-android/30/crtbegin_so.o
+#   libzig.so ld.lld @cckit/link.rsp -o libitpgame.so cckit/sysroot/usr/lib/aarch64-linux-android/30/crtbegin_so.o
 #       <objects> -L<nativeLibraryDir> -lmain -Lcckit/sysroot/usr/lib/aarch64-linux-android/30
 #       cckit/clang/lib/libclang_rt.builtins-aarch64-android.a -ldl -lc cckit/sysroot/.../30/crtend_so.o
 cat > $O/link.rsp <<'EOF'
@@ -69,6 +69,6 @@ cat > $O/link.rsp <<'EOF'
 -shared
 -z max-page-size=16384
 -Bsymbolic
--soname libeowgame.so
+-soname libitpgame.so
 EOF
 echo "$O: $n headers, $(find $O -type f | wc -l | tr -d ' ') files, $(du -sh $O | cut -f1)"

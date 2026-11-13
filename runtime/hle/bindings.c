@@ -1,5 +1,5 @@
 // Control remapping: tables runtime/hle/input.c reads on every input event (so a change applies at once), the
-// capture used by the "click a binding, then press" UI, and their eowrecomp.ini lines. See runtime/input_bind.h.
+// capture used by the "click a binding, then press" UI, and their itprecomp.ini lines. See runtime/input_bind.h.
 #include <SDL3/SDL.h>
 #include <stdatomic.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@ static const char *const k_names[BIND_KEY_COUNT] = {
     "D-pad Left", "D-pad Up", "D-pad Right", "D-pad Down", "Left stick Up", "Left stick Down", "Left stick Left",
     "Left stick Right", "Right stick Up", "Right stick Down", "Right stick Left", "Right stick Right",
 };
-// controller buttons by position (eowrecomp.ini)
+// controller buttons by position (itprecomp.ini)
 static const char *const k_pad_ini[PADB_HOST_COUNT] = {
     "south", "east", "west", "north", "back", "guide", "start", "lstick", "rstick", "lshoulder", "rshoulder",
     "dpad_up", "dpad_down", "dpad_left", "dpad_right", "misc1", "rpaddle1", "lpaddle1", "rpaddle2", "lpaddle2",
@@ -82,7 +82,7 @@ const char *bind_key_label(int sc) {
 }
 
 int bind_label_family(void) {
-    extern int input_pad_family(void);  // runtime/hle/input.c (the game's open pad, or EOWRECOMP_PAD_TYPE)
+    extern int input_pad_family(void);  // runtime/hle/input.c (the game's open pad, or ITPRECOMP_PAD_TYPE)
     int f = input_pad_family();
     if (f) return f;
     int n = 0, t = 0;  // start screen: input.c hasn't opened a pad yet
@@ -201,7 +201,7 @@ bool bind_capture_event(const SDL_Event *e) {
     }
 }
 
-// ------------------------------------------------------------------ eowrecomp.ini
+// ------------------------------------------------------------------ itprecomp.ini
 bool bind_settings_load(const char *key, const char *val) {
     bool pad = !strncmp(key, "bind_pad_", 9), kb = !strncmp(key, "bind_key_", 9);
     if (!pad && !kb) return false;

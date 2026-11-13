@@ -275,7 +275,7 @@ uint64_t renderer_fence_seq(void) {
 // Wait until submission `seq` has completed (0 = nothing to wait for).
 void renderer_wait_seq(uint64_t seq) {
     if (!seq) return;
-    if (ENV("EOWRECOMP_LOG_FENCES")) {  // (debug) how far behind the newest submission the waited fence is
+    if (ENV("ITPRECOMP_LOG_FENCES")) {  // (debug) how far behind the newest submission the waited fence is
         extern uint64_t renderer_present_count(void);
         static uint64_t f0, hist[6], frames_seen;
         uint64_t f = renderer_present_count();
@@ -344,10 +344,10 @@ static id<MTLTexture> view_cached(id<MTLTexture> base, uint64_t params, id<MTLTe
     slot = free_slot >= 0 ? (uint32_t)free_slot : start;
     id<MTLTexture> v = make();
     if (!v) return base;
-    if (ENV("EOWRECOMP_LOG_VIEWCREATE")) {  // (debug: what keeps making new views - overworld soak, views pile up)
+    if (ENV("ITPRECOMP_LOG_VIEWCREATE")) {  // (debug: what keeps making new views - overworld soak, views pile up)
         extern uint64_t renderer_present_count(void);
         static int n;
-        if (renderer_present_count() > (uint64_t)atol(ENV("EOWRECOMP_LOG_VIEWCREATE")) && n++ < 400)
+        if (renderer_present_count() > (uint64_t)atol(ENV("ITPRECOMP_LOG_VIEWCREATE")) && n++ < 400)
             LOG("[viewnew] f%llu base %p %s %lux%lu fmt %lu type %lu params %#llx live %d\n", (unsigned long long)renderer_present_count(),
                 (__bridge void *)base, base.label.UTF8String, (unsigned long)base.width, (unsigned long)base.height,
                 (unsigned long)base.pixelFormat, (unsigned long)base.textureType, (unsigned long long)params, g_views_live);
@@ -375,8 +375,8 @@ static id<MTLTexture> view_texture(NvnTexture *t, const NvnTextureView *v, bool 
     if (lv0 + nlv > base.mipmapLevelCount) nlv = base.mipmapLevelCount - lv0;
     if (pf == base.pixelFormat && lv0 == 0 && nlv == base.mipmapLevelCount && ly0 == 0 && type == base.textureType)
         return base;
-    static int vlog;  // EOWRECOMP_LOG_VIEWS: texture views that change the pixel format
-    if (pf != base.pixelFormat && vlog < 20 && getenv("EOWRECOMP_LOG_VIEWS")) {
+    static int vlog;  // ITPRECOMP_LOG_VIEWS: texture views that change the pixel format
+    if (pf != base.pixelFormat && vlog < 20 && getenv("ITPRECOMP_LOG_VIEWS")) {
         vlog++;
         LOG("[view] tex fmt %#x (mtl %lu) viewed as nvn %#x (mtl %lu)\n", t->format, (unsigned long)base.pixelFormat, v->format, (unsigned long)pf);
     }
@@ -444,9 +444,9 @@ static void begin_pass(void) {
     // Commit the frame in chunks: the GPU starts on the first passes while the CPU still encodes the rest. The
     // game waits for its previous frame before it submits the next one, so with one command buffer per frame the
     // GPU sat idle during our encoding and a frame cost GPU + encoding time (5120x1440 with the GPU clocked down:
-    // ~15.5 + a few ms -> missed vsync -> 30 fps). EOWRECOMP_CHUNK_PASSES=<n> (0 = one buffer per frame).
+    // ~15.5 + a few ms -> missed vsync -> 30 fps). ITPRECOMP_CHUNK_PASSES=<n> (0 = one buffer per frame).
     static int chunk = -1;
-    if (chunk < 0) { const char *e = ENV("EOWRECOMP_CHUNK_PASSES"); chunk = e ? atoi(e) : 8; }
+    if (chunk < 0) { const char *e = ENV("ITPRECOMP_CHUNK_PASSES"); chunk = e ? atoi(e) : 8; }
     if (chunk > 0 && cmdbuf && ++g_passes_in_cb >= chunk) renderer_submit();
     enc = [cb() renderCommandEncoderWithDescriptor:rp];
     vp_sx = pass_sx; vp_sy = pass_sy; vp_ox = 0; vp_oy = 0;
@@ -586,7 +586,7 @@ static void clear(int index, int kind, const void *color, uint32_t mask, bool de
 
 // ------------------------------------------------------------------ shaders (debug dump)
 static void dump_program(NvnProgram *p) {
-    if (!getenv("EOWRECOMP_DUMP_SHADERS")) return;
+    if (!getenv("ITPRECOMP_DUMP_SHADERS")) return;
     static int n;
     mkdir("build/shaders", 0755);
     for (int s = 0; s < 6; s++) {
@@ -826,7 +826,7 @@ static void shader_cache_note(const char *vs, const char *fs) {
 
 void shader_cache_warm(void) {
     static int started;
-    if (started++ || getenv("EOWRECOMP_NO_SHADER_WARM")) return;
+    if (started++ || getenv("ITPRECOMP_NO_SHADER_WARM")) return;
     dispatch_async(dispatch_get_global_queue(QOS_CLASS_UTILITY, 0), ^{
         DIR *d = opendir("cache/shaders");
         if (!d) return;
@@ -849,9 +849,9 @@ void shader_cache_warm(void) {
     });
 }
 
-static bool sync_shaders(void) {  // EOWRECOMP_SYNC_SHADERS: compile on first use, blocking (deterministic tests)
+static bool sync_shaders(void) {  // ITPRECOMP_SYNC_SHADERS: compile on first use, blocking (deterministic tests)
     static int v = -1;
-    if (v < 0) v = getenv("EOWRECOMP_SYNC_SHADERS") != NULL;
+    if (v < 0) v = getenv("ITPRECOMP_SYNC_SHADERS") != NULL;
     return v;
 }
 
@@ -861,8 +861,8 @@ static void compile_program(Prog *pr) {
     static dispatch_once_t once;
     dispatch_once(&once, ^{ vopts = [MTLCompileOptions new]; vopts.preserveInvariance = YES; });
     double t0 = now_ms();
-    // EOWRECOMP_SHADER_SALT=<text>: tag sources so Metal's disk cache misses (measure cold first-use compiles)
-    NSString *salt = getenv("EOWRECOMP_SHADER_SALT") ? [NSString stringWithFormat:@"\n// %s\n", getenv("EOWRECOMP_SHADER_SALT")] : @"";
+    // ITPRECOMP_SHADER_SALT=<text>: tag sources so Metal's disk cache misses (measure cold first-use compiles)
+    NSString *salt = getenv("ITPRECOMP_SHADER_SALT") ? [NSString stringWithFormat:@"\n// %s\n", getenv("ITPRECOMP_SHADER_SALT")] : @"";
     id<MTLLibrary> vl = [dev newLibraryWithSource:[@(pr->vi->msl) stringByAppendingString:salt] options:vopts error:&err];
     if (!vl) { LOG("[shader] VS compile failed: %s\n%s\n", err.localizedDescription.UTF8String, pr->vi->msl); pr->failed = true; return; }
     id<MTLLibrary> fl = [dev newLibraryWithSource:[@(pr->fi->msl) stringByAppendingString:salt] options:nil error:&err];
@@ -905,16 +905,16 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     maxwell_gmem_base = HEAP_BASE;
     maxwell_gmem_size = HEAP_MAX;
     {
-        // EOWRECOMP_DBG_FS=<fs code addr hex>:<pc hex>:<reg>
+        // ITPRECOMP_DBG_FS=<fs code addr hex>:<pc hex>:<reg>
         static int parsed;
         static unsigned long long dbg_addr;
         static unsigned dbg_pc;
         static int dbg_reg;
-        if (!parsed) { parsed = 1; const char *e = getenv("EOWRECOMP_DBG_FS"); if (e) sscanf(e, "%llx:%x:%d", &dbg_addr, &dbg_pc, &dbg_reg); }
+        if (!parsed) { parsed = 1; const char *e = getenv("ITPRECOMP_DBG_FS"); if (e) sscanf(e, "%llx:%x:%d", &dbg_addr, &dbg_pc, &dbg_reg); }
         maxwell_dbg_code = dbg_addr ? (const uint8_t *)(uintptr_t)dbg_addr : NULL;
         static unsigned long long dbg_vs;
         static int vparsed;
-        if (!vparsed) { vparsed = 1; const char *e = getenv("EOWRECOMP_DBG_VS"); if (e) dbg_vs = strtoull(e, NULL, 16); }
+        if (!vparsed) { vparsed = 1; const char *e = getenv("ITPRECOMP_DBG_VS"); if (e) dbg_vs = strtoull(e, NULL, 16); }
         maxwell_dbg_vs = dbg_vs ? (const uint8_t *)(uintptr_t)dbg_vs : NULL;
         maxwell_dbg_pc = dbg_pc;
         maxwell_dbg_reg = dbg_reg;
@@ -935,7 +935,7 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     fkey->vs_out_mask = pr->vi->out_mask;
     pr->fi = maxwell_translate((const uint8_t *)(uintptr_t)p->stages[1].code_addr, fmax, STAGE_FRAGMENT, fkey);
     if (!pr->fi->msl) { LOG("[shader] FS translate failed: %s\n", pr->fi->error); pr->failed = true; return nil; }
-    if (getenv("EOWRECOMP_SAVE_MSL")) {
+    if (getenv("ITPRECOMP_SAVE_MSL")) {
         mkdir("build/msl", 0755);
         char path[256];
         snprintf(path, sizeof path, "build/msl/%llx_vs.metal", p->stages[0].code_addr);
@@ -951,7 +951,7 @@ static Prog *get_program(NvnProgram *p, ShaderKey *vkey, ShaderKey *fkey) {
     // First-time compiles take ~40 ms each on Metal: build off the render thread; draws using this program are
     // skipped until it's ready (the object appears a few frames later instead of the game stalling).
     static dispatch_queue_t q;
-    if (!q) q = dispatch_queue_create("eowrecomp.shaders", DISPATCH_QUEUE_CONCURRENT);
+    if (!q) q = dispatch_queue_create("itprecomp.shaders", DISPATCH_QUEUE_CONCURRENT);
     dispatch_async(q, ^{ compile_program(pr); });
     return pr;
 }
@@ -978,18 +978,18 @@ static id<MTLSamplerState> sampler_for(NvnSamplerDesc *d) {
     sd.lodMinClamp = d->lod_min;
     sd.lodMaxClamp = d->lod_max > 1000 ? FLT_MAX : d->lod_max;
     if (d->max_aniso > 1) sd.maxAnisotropy = (NSUInteger)fminf(d->max_aniso, 16);
-    if (d->lod_bias != 0 && getenv("EOWRECOMP_LOG_BIAS"))
+    if (d->lod_bias != 0 && getenv("ITPRECOMP_LOG_BIAS"))
         LOG("[sampler] lod bias %g (min filter %u, aniso %g)\n", d->lod_bias, mf, d->max_aniso);
-    static float lodmin = -1;  // EOWRECOMP_LOD_MIN=<n>: skip the n sharpest mips everywhere (aliasing experiments)
-    if (lodmin < 0) lodmin = getenv("EOWRECOMP_LOD_MIN") ? (float)atof(getenv("EOWRECOMP_LOD_MIN")) : 0;
+    static float lodmin = -1;  // ITPRECOMP_LOD_MIN=<n>: skip the n sharpest mips everywhere (aliasing experiments)
+    if (lodmin < 0) lodmin = getenv("ITPRECOMP_LOD_MIN") ? (float)atof(getenv("ITPRECOMP_LOD_MIN")) : 0;
     if (lodmin > 0 && mf > 1) sd.lodMinClamp = fmaxf(sd.lodMinClamp, lodmin);
-    static int stest = -1;  // EOWRECOMP_SAMPLER_TEST: full mip range + 16x aniso on mipmapped samplers (moire test)
-    if (stest < 0) stest = getenv("EOWRECOMP_SAMPLER_TEST") != NULL;
+    static int stest = -1;  // ITPRECOMP_SAMPLER_TEST: full mip range + 16x aniso on mipmapped samplers (moire test)
+    if (stest < 0) stest = getenv("ITPRECOMP_SAMPLER_TEST") != NULL;
     if (stest && mf > 1) { sd.lodMinClamp = 0; sd.lodMaxClamp = FLT_MAX; sd.maxAnisotropy = 16; }
-    if (getenv("EOWRECOMP_LOG_SAMPLERS"))
+    if (getenv("ITPRECOMP_LOG_SAMPLERS"))
         LOG("[sampler] min %u mag %u lod %g..%g aniso %g wrap %u %u\n", mf, d->mag_filter, d->lod_min, d->lod_max, d->max_aniso,
             d->wrap[0], d->wrap[1]);
-    if (d->compare_mode) sd.compareFunction = getenv("EOWRECOMP_NO_SHADOW") ? MTLCompareFunctionAlways : compare_fn((uint8_t)d->compare_func);
+    if (d->compare_mode) sd.compareFunction = getenv("ITPRECOMP_NO_SHADOW") ? MTLCompareFunctionAlways : compare_fn((uint8_t)d->compare_func);
     sd.supportArgumentBuffers = NO;
     id<MTLSamplerState> s = [dev newSamplerStateWithDescriptor:sd];
     d->backend = (void *)CFBridgingRetain(s);
@@ -1113,7 +1113,7 @@ static bool is_attachment(NvnTexture *t) {
 static void resolve_feedback(Prog *pr) {
     nfeedback = 0;
     static int off = -1;
-    if (off < 0) off = getenv("EOWRECOMP_NO_FEEDBACK") != NULL;
+    if (off < 0) off = getenv("ITPRECOMP_NO_FEEDBACK") != NULL;
     if (off) return;
     ShaderInfo *infos[2] = {pr->vi, pr->fi};
     for (int sg = 0; sg < 2; sg++)
@@ -1127,7 +1127,7 @@ static void resolve_feedback(Prog *pr) {
             NSMutableDictionary *copies = g_snap_copies;
             NSValue *key = [NSValue valueWithPointer:t];
             static int nosnap = -1;
-            if (nosnap < 0) nosnap = getenv("EOWRECOMP_NO_SNAPSHOT_REUSE") != NULL;
+            if (nosnap < 0) nosnap = getenv("ITPRECOMP_NO_SNAPSHOT_REUSE") != NULL;
             int si = -1;
             for (int k = 0; k < 8; k++) if (snap_tex[k] == t) si = k;
             // A draw that writes the same depth buffer it samples can't depend on what it reads (that is undefined on the
@@ -1141,7 +1141,7 @@ static void resolve_feedback(Prog *pr) {
             }
             stat_feedback_copies++;
             static int logfb = -1;
-            if (logfb < 0) logfb = getenv("EOWRECOMP_LOG_FEEDBACK") != NULL;
+            if (logfb < 0) logfb = getenv("ITPRECOMP_LOG_FEEDBACK") != NULL;
             if (logfb && stat_feedback_copies % 50 == 1)
                 LOG("[feedback] copy %s %ux%u fmt %#x stage %d fs %016llx (last invalidated by %s) ds %d/%d/%d stencil %d ncolor %d c0 %ux%u fmt %#x mask %x\n", t == st.rt.depth ? "DEPTH" : "COLOR",
                     t->width, t->height, t->format, sg, (unsigned long long)g_cur_fs_hash, si >= 0 ? snap_why[si] : "new",
@@ -1366,7 +1366,7 @@ static void dispatch_compute(uint32_t gx, uint32_t gy, uint32_t gz) {
     CsProg *cp = compute_program(st.program);
     if (!cp) return;
     static int trace = -1;
-    if (trace < 0) trace = getenv("EOWRECOMP_TRACE_CS") != NULL;
+    if (trace < 0) trace = getenv("ITPRECOMP_TRACE_CS") != NULL;
 #define CST(x) do { if (trace) { fprintf(stderr, "[cs] %s\n", x); fflush(stderr); } } while (0)
     CST("end_pass");
     end_pass();
@@ -1493,7 +1493,7 @@ static id<MTLBuffer> expand_indices(uint32_t mode, uint32_t count, const void *i
 
 static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
     static uint64_t dump_fs = 1;
-    if (dump_fs == 1) { const char *e = getenv("EOWRECOMP_DUMP_UBO"); dump_fs = e ? strtoull(e, NULL, 16) : 0; }
+    if (dump_fs == 1) { const char *e = getenv("ITPRECOMP_DUMP_UBO"); dump_fs = e ? strtoull(e, NULL, 16) : 0; }
     if (dump_fs && st.program && st.program->stages[1].code_addr == dump_fs) {
         for (int i = 0; i < 18; i++) {
             if (!st.ubuf[1][i].addr) continue;
@@ -1503,8 +1503,8 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
             LOG("\n");
         }
     }
-    static int dump_vs = -1;  // EOWRECOMP_DUMP_VSUBO: every vertex-stage UBO (first 48 floats) of debug-frame draws
-    if (dump_vs < 0) dump_vs = getenv("EOWRECOMP_DUMP_VSUBO") != NULL;
+    static int dump_vs = -1;  // ITPRECOMP_DUMP_VSUBO: every vertex-stage UBO (first 48 floats) of debug-frame draws
+    if (dump_vs < 0) dump_vs = getenv("ITPRECOMP_DUMP_VSUBO") != NULL;
     for (int i = 0; dump_vs && i < 18; i++) {
         if (!st.ubuf[0][i].addr) continue;
         const float *f = (const float *)(uintptr_t)st.ubuf[0][i].addr;
@@ -1606,7 +1606,7 @@ static void draw(CmdRec *r, bool indexed) {
     static bool logged_modes;
     if (!logged_modes) {
         logged_modes = true;
-        const char *cb = getenv("EOWRECOMP_CBUF_BASE"), *tb = getenv("EOWRECOMP_TEX_BASE");
+        const char *cb = getenv("ITPRECOMP_CBUF_BASE"), *tb = getenv("ITPRECOMP_TEX_BASE");
         if (cb) cbuf_base = atoi(cb);
         if (tb) tex_base = atoi(tb);
     }
@@ -1643,14 +1643,14 @@ static void draw(CmdRec *r, bool indexed) {
             last_hash = fs ? hmix(1469598103934665603ull, (const void *)(uintptr_t)(fs + 0x30), 0x200) : 0;
         }
         static uint64_t log_hash = 1;
-        if (log_hash == 1) log_hash = getenv("EOWRECOMP_LOG_FSHASH") ? 0 : 2;
+        if (log_hash == 1) log_hash = getenv("ITPRECOMP_LOG_FSHASH") ? 0 : 2;
         if (!log_hash && g_debug_frame) LOG("[fshash] fs=%llx hash %016llx\n", fs, last_hash);
-        {   // EOWRECOMP_SKIP_FSHASH=h1,h2,...: drop draws using these fragment shaders (find which draw makes what)
+        {   // ITPRECOMP_SKIP_FSHASH=h1,h2,...: drop draws using these fragment shaders (find which draw makes what)
             static uint64_t skip[16];
             static int nskip = -1;
             if (nskip < 0) {
                 nskip = 0;
-                for (const char *p = getenv("EOWRECOMP_SKIP_FSHASH"); p && *p && nskip < 16;) {
+                for (const char *p = getenv("ITPRECOMP_SKIP_FSHASH"); p && *p && nskip < 16;) {
                     skip[nskip++] = strtoull(p, (char **)&p, 16);
                     while (*p == ',') p++;
                 }
@@ -1664,7 +1664,7 @@ static void draw(CmdRec *r, bool indexed) {
         if (last_hash) widescreen_backdrop_seen(last_hash);
         extern void widescreen_scene_ubo(const float *u, uint64_t size);  // (the camera's view-projection)
         if (st.ubuf[0][5].addr) widescreen_scene_ubo((const float *)(uintptr_t)st.ubuf[0][5].addr, st.ubuf[0][5].size);
-        if (last_hash == 0x71fe31bbf03c3515ull && getenv("EOWRECOMP_LOG_INDOOR")) {
+        if (last_hash == 0x71fe31bbf03c3515ull && getenv("ITPRECOMP_LOG_INDOOR")) {
             static uint64_t lf;
             extern uint64_t renderer_present_count(void);
             if (renderer_present_count() != lf) {
@@ -1677,9 +1677,9 @@ static void draw(CmdRec *r, bool indexed) {
         }
     }
     static int log_rt_w = -1, log_rt_h;
-    if (log_rt_w < 0) { const char *e = getenv("EOWRECOMP_LOG_RT"); log_rt_w = 0; if (e) sscanf(e, "%dx%d", &log_rt_w, &log_rt_h); }
+    if (log_rt_w < 0) { const char *e = getenv("ITPRECOMP_LOG_RT"); log_rt_w = 0; if (e) sscanf(e, "%dx%d", &log_rt_w, &log_rt_h); }
     static uint64_t log_rt_addr = 1;
-    if (log_rt_addr == 1) { const char *e = getenv("EOWRECOMP_LOG_RT_ADDR"); log_rt_addr = e ? strtoull(e, NULL, 16) : 0; }
+    if (log_rt_addr == 1) { const char *e = getenv("ITPRECOMP_LOG_RT_ADDR"); log_rt_addr = e ? strtoull(e, NULL, 16) : 0; }
     bool addr_hit = false;
     for (int i = 0; log_rt_addr && i < st.rt.ncolor; i++)
         if (st.rt.color[i] && st.rt.color[i]->addr <= log_rt_addr + 0x40000 && st.rt.color[i]->addr + 0x40000 >= log_rt_addr) addr_hit = true;
@@ -1836,7 +1836,7 @@ static void draw(CmdRec *r, bool indexed) {
     if (!dss) {
         MTLDepthStencilDescriptor *dd = [MTLDepthStencilDescriptor new];
         static int nodt = -1;
-        if (nodt < 0) nodt = getenv("EOWRECOMP_NO_DEPTH_TEST") != NULL;
+        if (nodt < 0) nodt = getenv("ITPRECOMP_NO_DEPTH_TEST") != NULL;
         if (st.ds[0] && !nodt) { dd.depthCompareFunction = compare_fn(st.ds[2]); dd.depthWriteEnabled = st.ds[1] != 0; }
         else { dd.depthCompareFunction = MTLCompareFunctionAlways; dd.depthWriteEnabled = NO; }
         if (st.ds[3]) {
@@ -1872,11 +1872,11 @@ static void draw(CmdRec *r, bool indexed) {
     {   // polygon offset (decals on floors: without it they z-fight). Enables: bit 2 = fill (NVN PolygonOffsetEnable)
         static float last[3] = {0, 0, 0};
         float f[3] = {0, 0, 0};
-        static int off = -1;  // EOWRECOMP_NO_DEPTH_BIAS: ignore the game's polygon offset (A/B tests)
-        if (off < 0) off = getenv("EOWRECOMP_NO_DEPTH_BIAS") != NULL;
+        static int off = -1;  // ITPRECOMP_NO_DEPTH_BIAS: ignore the game's polygon offset (A/B tests)
+        if (off < 0) off = getenv("ITPRECOMP_NO_DEPTH_BIAS") != NULL;
         if ((st.poly[3] & 4) && !off) memcpy(f, st.poly_offset, sizeof f);
         static int nlog;
-        if ((st.poly[3] & 4) && nlog < 3 && getenv("EOWRECOMP_LOG_BIAS")) { nlog++; LOG("[bias] factor %g units %g clamp %g\n", st.poly_offset[0], st.poly_offset[1], st.poly_offset[2]); }
+        if ((st.poly[3] & 4) && nlog < 3 && getenv("ITPRECOMP_LOG_BIAS")) { nlog++; LOG("[bias] factor %g units %g clamp %g\n", st.poly_offset[0], st.poly_offset[1], st.poly_offset[2]); }
         if (memcmp(f, last, sizeof f) || enc != last_bias_enc) {
             [enc setDepthBias:f[1] slopeScale:f[0] clamp:f[2]];
             memcpy(last, f, sizeof f);
@@ -1934,8 +1934,8 @@ static void draw(CmdRec *r, bool indexed) {
         }
         bool composite = reads_scene || fade_fill || (fullscreen_fill && wide_frame == renderer_present_count());
         if (!composite) wide_frame = ~0ull;
-        static int log_fills = -1;  // EOWRECOMP_LOG_FILLS: every full-screen untextured fill (fs hash, colour cbuf, decision)
-        if (log_fills < 0) log_fills = getenv("EOWRECOMP_LOG_FILLS") != NULL;
+        static int log_fills = -1;  // ITPRECOMP_LOG_FILLS: every full-screen untextured fill (fs hash, colour cbuf, decision)
+        if (log_fills < 0) log_fills = getenv("ITPRECOMP_LOG_FILLS") != NULL;
         if (log_fills && fullscreen_fill) {
             static uint64_t lastf; static int nthis;
             uint64_t f = renderer_present_count();
@@ -1947,7 +1947,7 @@ static void draw(CmdRec *r, bool indexed) {
                     c ? c[4] : -1, c ? c[5] : -1, c ? c[6] : -1, c ? c[7] : -1);
             }
         }
-        if (g_debug_frame && getenv("EOWRECOMP_LOG_UI")) {
+        if (g_debug_frame && getenv("ITPRECOMP_LOG_UI")) {
             LOG("[ui2] fs=%llx count %llu ntex %d reads_scene %d fill %d quad %d -> %d |", st.program->stages[1].code_addr, r->x[2],
                 pr->fi->ntex, reads_scene, fullscreen_fill, fullscreen_quad, composite);
             for (int i = 0; i < pr->fi->ntex && i < 4; i++)
@@ -1982,7 +1982,7 @@ static void draw(CmdRec *r, bool indexed) {
         extern void pot_item_draw(float *m);                                                 // (runtime/hle/pot_glow.c)
         pot_item_draw((float *)(uintptr_t)st.ubuf[0][2].addr);
     }
-    if (ENV("EOWRECOMP_POT_PROBE") && st.ubuf[0][2].addr && st.ubuf[0][2].size >= 48) {  // (debug: bush / pot draws)
+    if (ENV("ITPRECOMP_POT_PROBE") && st.ubuf[0][2].addr && st.ubuf[0][2].size >= 48) {  // (debug: bush / pot draws)
         extern void pot_probe(const float *m, bool tintable, uint64_t mesh, uint32_t inst);
         uint32_t ninst = indexed ? (uint32_t)r->x[6] : (uint32_t)r->x[4];
         pot_probe((const float *)(uintptr_t)st.ubuf[0][2].addr, pr->fi->uses_tint, st.vbuf[0].addr, ninst);
@@ -2220,8 +2220,8 @@ static id<MTLTexture> copy_raw_view(id<MTLTexture> t) {
 
 static void draw_copy(id<MTLTexture> s, int sx0, int sy0, int sw, int sh, id<MTLTexture> d, int dx0, int dy0, int dw, int dh,
                       bool linear) {
-    static int raw = -1;  // EOWRECOMP_COPY_RAW_SRGB: copies move values unchanged (no sRGB decode/encode on either side)
-    if (raw < 0) raw = getenv("EOWRECOMP_COPY_RAW_SRGB") != NULL;
+    static int raw = -1;  // ITPRECOMP_COPY_RAW_SRGB: copies move values unchanged (no sRGB decode/encode on either side)
+    if (raw < 0) raw = getenv("ITPRECOMP_COPY_RAW_SRGB") != NULL;
     if (raw) { s = copy_raw_view(s); d = copy_raw_view(d); }
     MTLRenderPassDescriptor *rp = [MTLRenderPassDescriptor renderPassDescriptor];
     rp.colorAttachments[0].texture = d;
@@ -2270,7 +2270,7 @@ static void copy_texture_to_buffer(const TexRefRec *src, uint64_t dst) {
     if (!fi || !fi->bpb) return;
     {
         static int nlog;
-        if (nlog++ < 12 || getenv("EOWRECOMP_LOG_READBACK"))
+        if (nlog++ < 12 || getenv("ITPRECOMP_LOG_READBACK"))
             LOG("[readback] tex %ux%u f%#x level %d region %d,%d %dx%d -> %llx row %llu\n", t->width, t->height,
                 t->format, level, rg[0], rg[1], rg[3], rg[4], dst, row);
     }
@@ -2333,7 +2333,7 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     int sw = sr[3] ? (int)lroundf(sr[3] * ssx) : (int)s.width, sh = sr[4] ? (int)lroundf(sr[4] * ssy) : (int)s.height;
     int dw = dr[3] ? (int)lroundf(dr[3] * dsx) : (int)d.width, dh = dr[4] ? (int)lroundf(dr[4] * dsy) : (int)d.height;
     static int no_depth_scale = -1;
-    if (no_depth_scale < 0) no_depth_scale = getenv("EOWRECOMP_NO_DEPTH_SCALE") != NULL;
+    if (no_depth_scale < 0) no_depth_scale = getenv("ITPRECOMP_NO_DEPTH_SCALE") != NULL;
     if (!no_depth_scale && renderer_format_is_depth(dt->format) && (sw != dw || sh != dh) && s.sampleCount == 1 && dt->format != 0x31) {
         // scaled depth copy (the game builds its depth pyramid this way): draw, writing fragment depth
         MTLRenderPassDescriptor *drp = [MTLRenderPassDescriptor renderPassDescriptor];
@@ -2386,7 +2386,7 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
         [e endEncoding];
         stat_passes++;
         static int dbgc = -1;
-        if (dbgc < 0) dbgc = getenv("EOWRECOMP_DEBUG_DEPTHCOPY") != NULL;
+        if (dbgc < 0) dbgc = getenv("ITPRECOMP_DEBUG_DEPTHCOPY") != NULL;
         if (dbgc) {
             static int nlog;
             if (nlog++ < 6) {
@@ -2519,8 +2519,8 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_CLEAR_COLOR: {
             snap_reason = "clear-color"; snapshots_invalidate(NULL);
             int index = (int)r->x[0];
-            static int log_clears = -1;  // EOWRECOMP_LOG_CLEARS: every colour clear (frame, target size, mask, scissor)
-            if (log_clears < 0) log_clears = getenv("EOWRECOMP_LOG_CLEARS") != NULL;
+            static int log_clears = -1;  // ITPRECOMP_LOG_CLEARS: every colour clear (frame, target size, mask, scissor)
+            if (log_clears < 0) log_clears = getenv("ITPRECOMP_LOG_CLEARS") != NULL;
             if (log_clears && index < st.rt.ncolor && st.rt.color[index])
                 LOG("[cclear] frame %llu idx %d %ux%u f%#x mask %#x scissor %d,%d %dx%d\n", (unsigned long long)renderer_present_count(),
                     index, st.rt.color[index]->width, st.rt.color[index]->height, st.rt.color[index]->format, (uint32_t)r->x[2],
@@ -2619,7 +2619,7 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_FENCE_SYNC: {
             // The CPU may read GPU-written memory (compute results) once the fence is signaled.
             static int fence_flush = -1;
-            if (fence_flush < 0) fence_flush = getenv("EOWRECOMP_FENCE_FLUSH") ? 1 : 0;
+            if (fence_flush < 0) fence_flush = getenv("ITPRECOMP_FENCE_FLUSH") ? 1 : 0;
             if (fence_flush) renderer_flush();
             extern void nvn_sync_set_seq(uint64_t guest, uint64_t seq);
             if (r->x[1]) nvn_sync_set_seq(r->x[1], renderer_fence_seq());
@@ -2694,7 +2694,7 @@ void backend_execute(uint64_t handle) {
     @autoreleasepool {
         exec_list(handle, 0);
         static int sync_submit = -1;
-        if (sync_submit < 0) sync_submit = getenv("EOWRECOMP_SYNC_SUBMIT") ? 1 : 0;
+        if (sync_submit < 0) sync_submit = getenv("ITPRECOMP_SYNC_SUBMIT") ? 1 : 0;
         if (sync_submit) renderer_flush();  // old behaviour: finish the GPU work before returning
         else renderer_submit();  // the guest fences (nvnSyncWait) before reusing memory the GPU reads
     }

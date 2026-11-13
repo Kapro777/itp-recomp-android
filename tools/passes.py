@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Summarise a EOWRECOMP_DEBUG_FRAME log (build/run_shot.log): consecutive draws grouped by (fragment shader hash,
+"""Summarise a ITPRECOMP_DEBUG_FRAME log (build/run_shot.log): consecutive draws grouped by (fragment shader hash,
 render target), in order: index range, count, rt, depth, first draw's sizes."""
 import re, sys
 log = open(sys.argv[1] if len(sys.argv) > 1 else 'build/run_shot.log').read().split('\n')

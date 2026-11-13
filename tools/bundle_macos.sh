@@ -1,20 +1,20 @@
 #!/bin/bash
-# make app: build/EoWRecomp.app from <exe> (default build/mac15/eowrecomp). Contents/MacOS: the executable;
+# make app: build/ITPRecomp.app from <exe> (default build/mac15/itprecomp). Contents/MacOS: the executable;
 # Contents/Frameworks: every non-system dylib it loads (SDL3, FFmpeg; from build/deps, else Homebrew), load
 # paths rewritten to @rpath; Contents/Resources: the icon, the seed generator helper (build/helper/rando-gen, when
 # built: runtime/ui/rando_tab.mm generator_cmd) and what the start screen builds the game code with on the player's
-# machine (runtime/gamebuild.c): the generator helper (build/helper/eowgen), the compiler (build/zig, tools/fetch_zig.sh)
+# machine (runtime/gamebuild.c): the generator helper (build/helper/itpgen), the compiler (build/zig, tools/fetch_zig.sh)
 # and the headers the code is compiled against (gamelib-src/). Ad-hoc signed. No game files, game code or fonts: the
 # app keeps those in ~/Library/Application Support/<bundle id> (runtime/paths.h).
 # MACOS_MIN=<x.y>: LSMinimumSystemVersion, and every Mach-O inside must be built for it or older (else it fails and
 # lists them); without it the newest minimum found inside is used.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-EXE=${1:-build/eowrecomp}
-APP="build/EoWRecomp.app"
+EXE=${1:-build/itprecomp}
+APP="build/ITPRecomp.app"
 DEPS=$PWD/build/deps
 BUNDLE_ID=$(sed -n 's/^#define RT_BUNDLE_ID "\(.*\)"/\1/p' runtime/paths.h)
-VERSION=$(sed -n 's/^#define EOWRECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
+VERSION=$(sed -n 's/^#define ITPRECOMP_VERSION "\(.*\)"/\1/p' runtime/ui/launcher.mm)
 # CFBundleShortVersionString must be digits: alpha_<n> -> 0.1.<n>, beta_<n> -> 0.9.<n>, v1.2.3 -> 1.2.3
 case "$VERSION" in
     alpha_*) VERSION="0.1.${VERSION#alpha_}" ;;
@@ -22,10 +22,10 @@ case "$VERSION" in
     v*) VERSION="${VERSION#v}" ;;
 esac
 HELPER=build/helper/rando-gen
-GEN_HELPER=build/helper/eowgen
+GEN_HELPER=build/helper/itpgen
 ZIG=build/zig
 [ -x "$EXE" ] || { echo "no $EXE"; exit 1; }
-[ -x "$GEN_HELPER/eowgen" ] || { echo "no $GEN_HELPER (make gen-helper)"; exit 1; }
+[ -x "$GEN_HELPER/itpgen" ] || { echo "no $GEN_HELPER (make gen-helper)"; exit 1; }
 [ -x "$ZIG/zig" ] || { echo "no $ZIG (tools/fetch_zig.sh)"; exit 1; }
 # the app must hold no game code: that's built on the player's machine (grep without -q: with pipefail, nm cut off
 # early would hide a match)
@@ -34,10 +34,10 @@ if nm "$EXE" | grep ' _f_70' >/dev/null; then echo "$EXE has game code linked in
 rm -rf "$APP"
 C="$APP/Contents"
 mkdir -p "$C/MacOS" "$C/Frameworks" "$C/Resources"
-cp "$EXE" "$C/MacOS/eowrecomp"
-strip -S "$C/MacOS/eowrecomp"  # (debug-map entries only: the symbols crash reports name functions by stay)
+cp "$EXE" "$C/MacOS/itprecomp"
+strip -S "$C/MacOS/itprecomp"  # (debug-map entries only: the symbols crash reports name functions by stay)
 if [ -x "$HELPER/rando-gen" ]; then cp -R "$HELPER" "$C/Resources/rando-gen"; else echo "note: no $HELPER (make rando-helper)"; fi
-cp -R "$GEN_HELPER" "$C/Resources/eowgen"
+cp -R "$GEN_HELPER" "$C/Resources/itpgen"
 cp -R "$ZIG" "$C/Resources/zig"
 mkdir "$C/Resources/gamelib-src"
 cp runtime/cpu.h runtime/simd.h runtime/simd_fp.h runtime/gamelib.h runtime/modules.h tools/gamelib_entry.c runtime/hle/hle_symbols.txt \
@@ -88,7 +88,7 @@ find_dep() {  # dep as referenced by (the original of) $2 -> a real file
 }
 deps_of() { otool -L "$1" | tail -n +2 | awk '{print $1}' | grep -v "^$(otool -D "$1" | tail -n +2 | head -1)\$" || true; }
 origin() { local s; s="$(dirname "$1")/.$(basename "$1").src"; if [ -f "$s" ]; then cat "$s"; else echo "$1"; fi; }
-queue="$C/MacOS/eowrecomp|$C/Frameworks/libMoltenVK.dylib"
+queue="$C/MacOS/itprecomp|$C/Frameworks/libMoltenVK.dylib"
 copied=" "
 while [ -n "$queue" ]; do
     f=${queue%%|*}; [ "$queue" = "$f" ] && queue= || queue=${queue#*|}
@@ -109,8 +109,8 @@ while [ -n "$queue" ]; do
 done
 rm -f "$C/Frameworks"/.*.src
 rpaths() { otool -l "$1" | awk '/LC_RPATH/ {getline; getline; print $2}'; }
-for r in $(rpaths "$C/MacOS/eowrecomp"); do install_name_tool -delete_rpath "$r" "$C/MacOS/eowrecomp"; done
-install_name_tool -add_rpath "@executable_path/../Frameworks" "$C/MacOS/eowrecomp"
+for r in $(rpaths "$C/MacOS/itprecomp"); do install_name_tool -delete_rpath "$r" "$C/MacOS/itprecomp"; done
+install_name_tool -add_rpath "@executable_path/../Frameworks" "$C/MacOS/itprecomp"
 for f in "$C/Frameworks"/*.dylib; do  # (their own build rpaths, if any: point them at the bundle instead)
     for r in $(rpaths "$f"); do install_name_tool -delete_rpath "$r" "$f"; done
     install_name_tool -add_rpath "@loader_path" "$f" 2>/dev/null || true
@@ -139,10 +139,10 @@ cat > "$C/Info.plist" <<EOF
 <plist version="1.0">
 <dict>
     <key>CFBundleDevelopmentRegion</key><string>en</string>
-    <key>CFBundleExecutable</key><string>eowrecomp</string>
+    <key>CFBundleExecutable</key><string>itprecomp</string>
     <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
-    <key>CFBundleName</key><string>EoWRecomp</string>
-    <key>CFBundleDisplayName</key><string>EoWRecomp</string>
+    <key>CFBundleName</key><string>ITPRecomp</string>
+    <key>CFBundleDisplayName</key><string>ITPRecomp</string>
     <key>CFBundleIconFile</key><string>icon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
@@ -159,8 +159,8 @@ printf 'APPL????' > "$C/PkgInfo"
 
 # ---- ad-hoc signature (Apple Silicon refuses to run unsigned code; the rewrites above invalidated the originals):
 # every Mach-O inside first, then the bundle
-while read -r f; do [ "$f" = "$C/MacOS/eowrecomp" ] || codesign -f -s - "$f" 2>/dev/null; done < <(machos)
+while read -r f; do [ "$f" = "$C/MacOS/itprecomp" ] || codesign -f -s - "$f" 2>/dev/null; done < <(machos)
 codesign -f -s - "$APP"
 codesign --verify --strict "$APP"
-if find "$APP" -name 'eowgame*' | grep . >/dev/null; then echo "game code inside $APP"; exit 1; fi
+if find "$APP" -name 'itpgame*' | grep . >/dev/null; then echo "game code inside $APP"; exit 1; fi
 echo "$APP: $(du -sh "$APP" | cut -f1), $(ls "$C/Frameworks" | wc -l | tr -d ' ') dylibs, macOS $MIN+"

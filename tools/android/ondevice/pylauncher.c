@@ -1,10 +1,10 @@
 // tools/android/ondevice/pylauncher.c: the generator's Python on the phone (docs/BUILD-android.md). CPython's
 // Android release is an embeddable libpython3.14.so without a `python` program; this is that program, shipped as
-// libeowpython.so in jniLibs (Android runs programs only from the app's native library folder).
-//   libeowpython.so <script> [args]   - as `python -I <script> [args]`
-// Its home (the standard library: <home>/lib/python3.14, lib-dynload/) is $EOWPY_HOME; $EOWPY_PATH (':'-separated) is
+// libitppython.so in jniLibs (Android runs programs only from the app's native library folder).
+//   libitppython.so <script> [args]   - as `python -I <script> [args]`
+// Its home (the standard library: <home>/lib/python3.14, lib-dynload/) is $ITPPY_HOME; $ITPPY_PATH (':'-separated) is
 // put in front of sys.path (tools/ and the site-packages holding capstone, unicorn, lz4). The hash seed is fixed (0) as
-// in the desktop helper (tools/eowgen.spec hash_seed=0): the same generated C on every run.
+// in the desktop helper (tools/itpgen.spec hash_seed=0): the same generated C on every run.
 #include <Python.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     c.install_signal_handlers = 1;
     c.buffered_stdio = 0;  // (progress lines reach the log as they are printed: runtime/gamebuild.c read_gen_log)
     PyStatus s;
-    const char *home = getenv("EOWPY_HOME");
+    const char *home = getenv("ITPPY_HOME");
     if (home && *home) {
         s = PyConfig_SetBytesString(&c, &c.home, home);
         if (PyStatus_Exception(s)) return fail(&c, s);
@@ -35,8 +35,8 @@ int main(int argc, char **argv) {
     if (PyStatus_Exception(s)) return fail(&c, s);
     s = PyConfig_Read(&c);
     if (PyStatus_Exception(s)) return fail(&c, s);
-    // sys.path, all of it (set here, Python computes none): $EOWPY_PATH, then the standard library and its modules
-    const char *extra = getenv("EOWPY_PATH");
+    // sys.path, all of it (set here, Python computes none): $ITPPY_PATH, then the standard library and its modules
+    const char *extra = getenv("ITPPY_PATH");
     char std[2][1200], paths[4096];
     snprintf(std[0], sizeof std[0], "%s/lib/python3.14", home ? home : ".");
     snprintf(std[1], sizeof std[1], "%s/lib/python3.14/lib-dynload", home ? home : ".");

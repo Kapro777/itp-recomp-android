@@ -2,7 +2,7 @@
 # tools/android/ondevice/make_assets.sh: what the APK carries for building the game code on the phone besides its
 # programs (docs/BUILD-android.md), into build/ondevice/assets/ (android/app/build.gradle -PonDeviceBuild adds
 # it to the APK's assets):
-#   ondevice.zip   unpacked into files/ondevice by EowActivity.buildTools, once per app version:
+#   ondevice.zip   unpacked into files/ondevice by ItpActivity.buildTools, once per app version:
 #                    pyhome/                 the generator's Python: standard library + modules (build_python.sh)
 #                    tools/                  the generator (tools/gen.py and its modules)
 #                    cckit/                  the NDK pieces the compiler needs (build_cckit.sh)
@@ -47,9 +47,9 @@ cp "$NDK/NOTICE" $O/licenses/android-ndk-NOTICE.txt
 cp "$NDK/NOTICE.toolchain" $O/licenses/android-ndk-toolchain-NOTICE.txt
 cat > $O/licenses/README.txt <<'EOF'
 Building the game code on the phone: what this app carries for it, and their licenses
-(EoWRecomp itself: MIT, see the project's LICENSE and README "License" for its other components)
+(ITPRecomp itself: MIT, see the project's LICENSE and README "License" for its other components)
 
-CPython 3.14.8 (libpython3.14.so, libeowpython.so's interpreter, the standard library)
+CPython 3.14.8 (libpython3.14.so, libitppython.so's interpreter, the standard library)
     PSF License 2.0 - python-LICENSE.txt (also lists libffi, zlib, bzip2, xz, zstd, mpdecimal used by its modules)
     source: https://www.python.org/downloads/release/python-3148/
 Capstone 5.0.9 (libcapstone.so, its Python bindings)
@@ -59,7 +59,7 @@ Unicorn 2.1.4 (libunicorn.so; its Python bindings: BSD)
     GNU GPL version 2 - unicorn-COPYING.txt
     source (complete, as built): https://pypi.org/project/unicorn/2.1.4/#files (unicorn-2.1.4.tar.gz,
     sha256 00567a70e323f749b419cd86bee4f9115beab7ebba32194581c090cbb7c59cff), https://github.com/unicorn-engine/unicorn/tree/2.1.4
-    built by tools/android/ondevice/build_python.sh in the EoWRecomp sources
+    built by tools/android/ondevice/build_python.sh in the ITPRecomp sources
 python-lz4 4.4.5 with the LZ4 library (lz4 extension modules)
     BSD 3-Clause / BSD 2-Clause - python-lz4-LICENSE.txt
     source: https://pypi.org/project/lz4/4.4.5/

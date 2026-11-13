@@ -37,7 +37,7 @@ __attribute__((section(".hle$z"), used)) static const HleImpl __stop_hle_impls[1
 #endif
 
 HostFn hle_lookup_impl(const char *name) {
-    const char *skip = getenv("EOWRECOMP_HLE_SKIP");  // debugging: disable HLE for names containing this
+    const char *skip = getenv("ITPRECOMP_HLE_SKIP");  // debugging: disable HLE for names containing this
     if (skip && strstr(name, skip)) return NULL;
     const HleImpl *start = __start_hle_impls, *stop = __stop_hle_impls;
     __asm__("" : "+r"(start), "+r"(stop));  // separate objects: keep the compiler from reasoning about them
@@ -212,7 +212,7 @@ const char *rt_host_fn_name(uint64_t pc, uint64_t *offset) {
 }
 
 static const char *host_sym(uint64_t pc, uint64_t *offset) {
-    // (game functions first: they live in eowgame.dll, which the OS lookup can only name as a whole)
+    // (game functions first: they live in itpgame.dll, which the OS lookup can only name as a whole)
     const char *s = rt_host_fn_name(pc, offset);
     return s ? s : plat_symbol(pc, offset);
 }

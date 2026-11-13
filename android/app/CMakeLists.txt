@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
 # The Android app's native side: libmain.so (the runtime: kernel, services, HLE, NVN -> Vulkan, the start screen and
-# menus) and libSDL3.so, which SDLActivity loads. The game code is not in here: it is libeowgame.so, built from the
+# menus) and libSDL3.so, which SDLActivity loads. The game code is not in here: it is libitpgame.so, built from the
 # player's own game files (tools/android/build_game.sh) and loaded at startup (runtime/gamelib.c).
 # Needs tools/android/build_deps.sh first (FFmpeg, shaderc, Vulkan headers, VMA, volk into build/android/deps, SDL3
 # sources into build/android/SDL3). (After LASRecomp-Android-Plus, MIT.)
-project(eowrecomp C CXX)
+project(itprecomp C CXX)
 
 set(ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../..)
 set(DEPS ${ROOT}/build/android/deps)
@@ -53,13 +53,13 @@ set(IMGUI_SRC ${IMGUI}/imgui.cpp ${IMGUI}/imgui_draw.cpp ${IMGUI}/imgui_tables.c
 
 add_library(main SHARED ${RT_SRC} ${ROOT}/runtime/platform/android.c ${ROOT}/runtime/platform/android_jni.c ${RT_CXX} ${UI_SRC}
                         ${IMGUI_SRC} ${DEPS}/include/volk/volk.c ${SMAA_INC})
-# the start screen / menu sources are plain C++ apart from their EOW_METAL blocks (as the Makefile's UIFLAGS)
+# the start screen / menu sources are plain C++ apart from their ITP_METAL blocks (as the Makefile's UIFLAGS)
 set_source_files_properties(${UI_SRC} PROPERTIES LANGUAGE CXX COMPILE_OPTIONS "-x;c++")
 target_include_directories(main PRIVATE ${ROOT}/runtime ${ROOT}/runtime/nvn ${IMGUI} ${IMGUI}/backends ${DEPS}/include
                                         ${DEPS}/include/volk ${CMAKE_BINARY_DIR}/inc ${ROOT}/third_party/smaa/Textures)
 # Vulkan through volk: entry points loaded at run time (Android's libvulkan exports only the API level's core
 # functions)
-target_compile_definitions(main PRIVATE VK_NO_PROTOTYPES VK_USE_PLATFORM_ANDROID_KHR IMGUI_IMPL_VULKAN_USE_VOLK EOW_RUNTIME
+target_compile_definitions(main PRIVATE VK_NO_PROTOTYPES VK_USE_PLATFORM_ANDROID_KHR IMGUI_IMPL_VULKAN_USE_VOLK ITP_RUNTIME
                                         "GAMELIB_ID=\"${GAMELIB_ID}\"" "GAMELIB_CFLAGS=\"${GAMELIB_FLAGS}\""
                                         "GAMELIB_SHARED=\"-shared\"")
 target_compile_options(main PRIVATE -fsigned-char -fno-strict-aliasing

@@ -1,7 +1,7 @@
-# Building EoWRecomp on Windows (x86-64)
+# Building ITPRecomp on Windows (x86-64)
 
 > [!NOTE]
-> Herdado do LAS Recomp (só renomeado). Ainda não revisado para o EoWRecomp: ver `docs/STATUS.md`.
+> Herdado do LAS Recomp (só renomeado). Ainda não revisado para o ITPRecomp: ver `docs/STATUS.md`.
 
 Status: part of main. Builds and runs the game on Vulkan (with your own game files); `make dist` packages the
 release zip.
@@ -20,7 +20,7 @@ From an MSYS2 UCRT64 shell, or Git Bash with MSYS2 first on PATH:
 
     export PATH="/c/msys64/ucrt64/bin:/c/msys64/usr/bin:$PATH"
     make gen        # once: recompile the game from extracted/exefs (your own game files; see the start screen)
-    make -j         # -> build/eowrecomp.exe and the game code library build/eowgame.dll
+    make -j         # -> build/itprecomp.exe and the game code library build/itpgame.dll
 
 Without `generated/` only the app is built: the start screen builds the game code itself when you set up the game
 files (as for players), given the generator and the compiler (`make gen-helper`, `tools/fetch_zig.sh`).
@@ -30,11 +30,11 @@ Run from a shell that has `C:\msys64\ucrt64\bin` on PATH (SDL3, FFmpeg, Vulkan, 
 
 ## Package
     make rando-helper   # the seed generator without Python (build/helper/rando-gen)
-    make gen-helper     # the game code generator without Python (build/helper/eowgen)
+    make gen-helper     # the game code generator without Python (build/helper/itpgen)
     tools/fetch_zig.sh  # the compiler the start screen builds the game code with (build/zig)
-    make dist           # -> build/dist/EoWRecomp-<version>-windows.zip (no game code inside)
+    make dist           # -> build/dist/ITPRecomp-<version>-windows.zip (no game code inside)
 
-The zip's `EoWRecomp/` folder holds `eowrecomp.exe` (icon from `docs/icon/icon.ico`, via windres),
+The zip's `ITPRecomp/` folder holds `itprecomp.exe` (icon from `docs/icon/icon.ico`, via windres),
 `rando-gen/` and the MSYS2 DLLs. No installer: game files, saves, seeds and settings are kept next to the exe, so
 the folder must be writable (the app says so and quits if it isn't, e.g. under Program Files). A source checkout
 with `extracted/` in the starting folder keeps using that folder instead.
@@ -52,5 +52,5 @@ with `extracted/` in the starting folder keeps using that folder instead.
 ## Tests
 - `tools/test_translate.sh`: shader translator fuzz (MSL output unchanged, GLSL compiles and validates).
 - `tools/test_vk_pipelines.sh`: fuzzed shaders through the backend's compile/reflection into real pipelines.
-- `EOWRECOMP_VK_VALIDATION=1` with `VK_ADD_LAYER_PATH` pointing at `C:\msys64\ucrt64\bin`: Khronos validation layer.
+- `ITPRECOMP_VK_VALIDATION=1` with `VK_ADD_LAYER_PATH` pointing at `C:\msys64\ucrt64\bin`: Khronos validation layer.
 - Run test windows directly, not under MSYS `timeout` (it stalls the window).

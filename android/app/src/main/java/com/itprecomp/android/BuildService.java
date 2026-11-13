@@ -1,4 +1,4 @@
-package com.eowrecomp.android;
+package com.itprecomp.android;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -33,7 +33,7 @@ public class BuildService extends Service {
         try {
             c.startForegroundService(i);
         } catch (Exception e) {  // (started from the background on Android 12+: the build goes on without it)
-            android.util.Log.w("EoWRecomp", "build service", e);
+            android.util.Log.w("ITPRecomp", "build service", e);
         }
     }
 
@@ -57,7 +57,7 @@ public class BuildService extends Service {
         ch.setShowBadge(false);
         nm.createNotificationChannel(ch);
         PowerManager pm = getSystemService(PowerManager.class);
-        mLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "EoWRecomp:gamebuild");
+        mLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ITPRecomp:gamebuild");
         mLock.setReferenceCounted(false);
         mLock.acquire(6 * 60 * 60 * 1000L);  // (a ceiling: released at the end of the build)
     }
@@ -89,7 +89,7 @@ public class BuildService extends Service {
     public IBinder onBind(Intent intent) { return null; }
 
     private Notification build() {
-        Intent open = new Intent(this, EowActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Intent open = new Intent(this, ItpActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pi = PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder b = new Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.stat_sys_download)

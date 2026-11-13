@@ -2,7 +2,7 @@
 //
 // Threads: SDL events arrive on the main thread and are queued; the menu is laid out and drawn on the
 // render thread inside backend_present, after the game image, into the same drawable.
-#ifdef EOW_METAL
+#ifdef ITP_METAL
 #import <Metal/Metal.h>
 #endif
 #include <SDL3/SDL.h>
@@ -15,7 +15,7 @@
 #include "option_rows.h"
 #include "imgui_internal.h"  // (NavCursorVisible)
 #include "osk.h"
-#ifdef EOW_METAL
+#ifdef ITP_METAL
 #include "imgui_impl_metal.h"
 #else
 #include "imgui_impl_vulkan.h"
@@ -61,7 +61,7 @@ static void set_open(bool open);
 extern "C" void menu_set_open(bool open) { set_open(open); }  // (the touch controls' menu button)
 extern "C" void menu_test_open(void) {
     set_open(true);
-    if (getenv("EOWRECOMP_MENU_TAB")) { extern int g_tab_request_ext; g_tab_request_ext = atoi(getenv("EOWRECOMP_MENU_TAB")); }
+    if (getenv("ITPRECOMP_MENU_TAB")) { extern int g_tab_request_ext; g_tab_request_ext = atoi(getenv("ITPRECOMP_MENU_TAB")); }
 }
 
 void menu_tabs_focus(bool first_tab);
@@ -312,7 +312,7 @@ static void style_init(void) {
 }
 
 
-#ifdef EOW_METAL
+#ifdef ITP_METAL
 static void init(id<MTLDevice> dev) {
 #else
 static void init(void) {
@@ -338,8 +338,8 @@ static void init(void) {
     // the menu window itself: Baloo 2 SemiBold, as on the start screen (shipped, OFL), at its Settings window's sizes; the
     // FPS counter, overlays and on-screen keyboard keep the fonts above
     char baloo[1024];
-    if (const char *f = getenv("EOWRECOMP_MENU_FONT")) strlcpy(baloo, f, sizeof baloo);  // (test) another weight / face
-    if (getenv("EOWRECOMP_MENU_FONT") || rt_resource("Baloo2-SemiBold.ttf", "third_party/fonts/Baloo2/Baloo2-SemiBold.ttf", baloo, sizeof baloo)) {
+    if (const char *f = getenv("ITPRECOMP_MENU_FONT")) strlcpy(baloo, f, sizeof baloo);  // (test) another weight / face
+    if (getenv("ITPRECOMP_MENU_FONT") || rt_resource("Baloo2-SemiBold.ttf", "third_party/fonts/Baloo2/Baloo2-SemiBold.ttf", baloo, sizeof baloo)) {
         g_menu_font = io.Fonts->AddFontFromFileTTF(baloo, 39, &cfg);
         g_menu_font_big = io.Fonts->AddFontFromFileTTF(baloo, 72, &cfg);
     }
@@ -347,7 +347,7 @@ static void init(void) {
     if (!g_font_big) g_font_big = g_font;
     if (!g_menu_font || !g_menu_font_big) g_menu_font = g_font, g_menu_font_big = g_font_big;
     style_init();
-#ifdef EOW_METAL
+#ifdef ITP_METAL
     ImGui_ImplMetal_Init(dev);
 #else
     vk_imgui_backend_init();
@@ -465,7 +465,7 @@ static void tab_display(void) {
         if (opt_choice("Internal resolution", &ri, res, NRES, RES_MATCH_AT, d, false)) g_settings.res_mode = res_mode[ri];
     }
     {   // each OS's own upscaler next to bilinear (UPSCALE_SHARP: MetalFX on macOS, AMD FSR 1 on Windows)
-#ifdef EOW_METAL
+#ifdef ITP_METAL
         static const char *ups[] = {"Bilinear", "MetalFX"};
         const char *ud = "How the image is scaled up to the window when it renders at a lower resolution. MetalFX: Apple's "
                          "upscaler, sharper. Bilinear: plain and soft.";
@@ -514,8 +514,8 @@ static void tab_quit(float scale, bool in_game) {
         ask = 0;
     const char *lost = in_game ? "\n\nProgress since your last save is lost." : "";
     char d1[200], d2[200];
-    snprintf(d1, sizeof d1, "Leaves the game and goes back to the EoWRecomp start screen.%s", lost);
-    snprintf(d2, sizeof d2, "Closes EoWRecomp.%s", lost);
+    snprintf(d1, sizeof d1, "Leaves the game and goes back to the ITPRecomp start screen.%s", lost);
+    snprintf(d2, sizeof d2, "Closes ITPRecomp.%s", lost);
     opt_begin("##quit", scale);
     opt_section("Quit");
     if (!ask) {
@@ -625,8 +625,8 @@ extern "C" int menu_keyboard_run(const char *initial, int max_len, char *out, in
     g_kbd_max = max_len > 0 && max_len < (int)sizeof g_kbd_text / 4 ? max_len : 8;
     input_reset();
     g_kbd = 1;
-    // (test) EOWRECOMP_KBD_AUTO=<text>: answer at once
-    if (getenv("EOWRECOMP_KBD_AUTO")) { snprintf(g_kbd_text, sizeof g_kbd_text, "%s", getenv("EOWRECOMP_KBD_AUTO")); g_kbd = 2; }
+    // (test) ITPRECOMP_KBD_AUTO=<text>: answer at once
+    if (getenv("ITPRECOMP_KBD_AUTO")) { snprintf(g_kbd_text, sizeof g_kbd_text, "%s", getenv("ITPRECOMP_KBD_AUTO")); g_kbd = 2; }
     while (g_kbd.load() == 1 && !g_rt_unwind) {  // ~60 Hz (a reboot cancels)
         uint64_t t0 = SDL_GetTicks();
         backend_represent();
@@ -732,7 +732,7 @@ static void tabs_body(float scale, bool in_game, void (*prelaunch)(float)) {
                 case 8: tab_about(); break;
                 case 9: tab_quit(scale, in_game); break;
                 }
-                static const char *scroll_test = getenv("EOWRECOMP_MENU_SCROLL");  // test hook: page scroll, 0..1
+                static const char *scroll_test = getenv("ITPRECOMP_MENU_SCROLL");  // test hook: page scroll, 0..1
                 if (scroll_test) ImGui::SetScrollY(ImGui::GetScrollMaxY() * (float)atof(scroll_test));
                 ImGui::EndChild();
                 ImGui::EndTabItem();
@@ -755,7 +755,7 @@ void menu_tabs_draw(float scale, ImFont *font, ImFont *font_big, bool in_game, v
     g_font = f0, g_font_big = f1;
 }
 
-#ifdef EOW_METAL
+#ifdef ITP_METAL
 void menu_render(id<MTLDevice> dev, id<MTLCommandBuffer> cb, id<MTLTexture> target) {
     const double tw = target.width, th = target.height;
 #else
@@ -768,7 +768,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
         if (g_inited) { pthread_mutex_lock(&q_lock); q_events.clear(); pthread_mutex_unlock(&q_lock); }
         return;
     }
-#ifdef EOW_METAL
+#ifdef ITP_METAL
     if (!g_inited) init(dev);
 #else
     if (!g_inited) init();
@@ -787,7 +787,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
     if (scale < 0.45f) scale = 0.45f;
     io.FontGlobalScale = scale;
 
-#ifdef EOW_METAL
+#ifdef ITP_METAL
     MTLRenderPassDescriptor *rp = [MTLRenderPassDescriptor renderPassDescriptor];
     rp.colorAttachments[0].texture = target;
     rp.colorAttachments[0].loadAction = MTLLoadActionLoad;
@@ -802,7 +802,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
         ImGui::GetStyle().ScaleAllSizes(scale);
         style_scale = scale;
     }
-#ifdef EOW_METAL
+#ifdef ITP_METAL
     ImGui_ImplMetal_NewFrame(rp);
 #else
     ImGui_ImplVulkan_NewFrame();
@@ -868,7 +868,7 @@ void menu_render(void *cmd, uint32_t target_w, uint32_t target_h) {
     if (!open && !kbd) touch_draw();  // (phones: the on-screen controls)
     ImGui::Render();
     g_text_busy = open && ui_text_busy();
-#ifdef EOW_METAL
+#ifdef ITP_METAL
     id<MTLRenderCommandEncoder> enc = [cb renderCommandEncoderWithDescriptor:rp];
     ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), cb, enc);
     [enc endEncoding];

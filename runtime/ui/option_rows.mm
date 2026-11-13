@@ -205,7 +205,7 @@ bool opt_text(const char *label, char *buf, size_t cap, const char *hint, const 
 
 void opt_end(void) {
     ImGui::PopStyleVar();
-    if (const char *t = getenv("EOWRECOMP_OPT_SCROLL")) ImGui::SetScrollY(ImGui::GetScrollMaxY() * (float)atof(t));  // (test)
+    if (const char *t = getenv("ITPRECOMP_OPT_SCROLL")) ImGui::SetScrollY(ImGui::GetScrollMaxY() * (float)atof(t));  // (test)
     ImGui::EndChild();
     // the description: the hovered row (mouse) wins, else the selected one (controller), else the last shown
     if (!g_desc_hover.empty()) g_desc_shown = g_desc_hover;

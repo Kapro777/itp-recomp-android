@@ -1,7 +1,7 @@
 // Android host layer (runtime/platform.h), arm64. From LASRecomp-Android-Plus (MIT). The Linux layer's approach (one read/write guest window, sigaction
 // crash handler), with what Android does differently: the app is forked from the zygote (no re-exec, no fresh address
 // space: the guest window sits GUEST_SHIFT lower, runtime/cpu.h), there is no terminal (stderr goes to logcat and to
-// eowrecomp.log in the data folder), backtraces come from the unwinder, and the "executable" is libmain.so.
+// itprecomp.log in the data folder), backtraces come from the unwinder, and the "executable" is libmain.so.
 #define _GNU_SOURCE
 #include <SDL3/SDL.h>
 #include <android/log.h>
@@ -54,14 +54,14 @@ bool plat_reset_guest(uint64_t lo, uint64_t hi) {
 // write protection: a query reports the range's pages written since the last one (or never asked about), marks them
 // clean and makes the range read-only; the first write to a page then faults, and the handler marks it written and
 // gives the page its write access back. The OS writing into guest memory (file reads) comes through plat_commit first.
-// EOWRECOMP_WRITE_TRACKING=0: none (every range counts as written).
+// ITPRECOMP_WRITE_TRACKING=0: none (every range counts as written).
 enum { WT_UNTRACKED = 0, WT_CLEAN = 1, WT_WRITTEN = 2 };
 static _Atomic uint8_t *wt_state;  // per heap page
 static _Atomic int wt_on = -1;      // (set once wt_state exists: other threads test it before touching the table)
 #define WT_PAGE 4096ull
 
 static void wt_setup(void) {
-    const char *e = getenv("EOWRECOMP_WRITE_TRACKING");
+    const char *e = getenv("ITPRECOMP_WRITE_TRACKING");
     bool on = (!e || atoi(e)) && sysconf(_SC_PAGESIZE) == (long)WT_PAGE;
     if (on) wt_state = calloc(HEAP_MAX / WT_PAGE, 1);
     atomic_store(&wt_on, on && wt_state ? 1 : 0);
@@ -156,8 +156,8 @@ void plat_thread_realtime(uint64_t period_ns) {
 }
 
 // ---- log
-// stdout / stderr into a pipe; a thread hands each line to logcat (tag EoWRecomp) and appends it to eowrecomp.log in
-// the data folder (the previous run's log is kept as eowrecomp.prev.log: after a crash, the app is started again).
+// stdout / stderr into a pipe; a thread hands each line to logcat (tag ITPRecomp) and appends it to itprecomp.log in
+// the data folder (the previous run's log is kept as itprecomp.prev.log: after a crash, the app is started again).
 static char g_log_path[1024];
 static FILE *g_log_file;
 
@@ -176,7 +176,7 @@ static void *log_pump(void *arg) {
         for (ssize_t i = 0; i < n; i++) {
             if (buf[i] == '\n' || n_line == sizeof line - 1) {
                 line[n_line] = 0;
-                __android_log_write(ANDROID_LOG_INFO, "EoWRecomp", line);
+                __android_log_write(ANDROID_LOG_INFO, "ITPRecomp", line);
                 n_line = 0;
                 if (buf[i] == '\n') continue;
             }
@@ -191,8 +191,8 @@ static void log_start(void) {
     if (!dir) dir = SDL_GetAndroidInternalStoragePath();
     if (dir) {
         char prev[1100];
-        snprintf(g_log_path, sizeof g_log_path, "%s/eowrecomp.log", dir);
-        snprintf(prev, sizeof prev, "%s/eowrecomp.prev.log", dir);
+        snprintf(g_log_path, sizeof g_log_path, "%s/itprecomp.log", dir);
+        snprintf(prev, sizeof prev, "%s/itprecomp.prev.log", dir);
         rename(g_log_path, prev);
         g_log_file = fopen(g_log_path, "w");
     }
@@ -230,9 +230,9 @@ const char *plat_symbol(uint64_t pc, uint64_t *offset) {
 void plat_fatal_notice(void) {
     fflush(stderr);
     char text[1600];
-    snprintf(text, sizeof text, "EoWRecomp stopped because of an error.\n\nDetails: %s",
-             g_log_path[0] ? g_log_path : "logcat (tag EoWRecomp)");
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "EoWRecomp", text, NULL);
+    snprintf(text, sizeof text, "ITPRecomp stopped because of an error.\n\nDetails: %s",
+             g_log_path[0] ? g_log_path : "logcat (tag ITPRecomp)");
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ITPRecomp", text, NULL);
 }
 
 bool plat_module_name(uint64_t pc, char *out, size_t n) {
@@ -349,7 +349,7 @@ void plat_thread_name(const char *name) { pthread_setname_np(pthread_self(), nam
 
 // Phones have one or two fast cores (the S20 FE's Snapdragon 865: cpu7 at 2.84 GHz, cpu4-6 at 2.42, cpu0-3 small) and
 // the game runs on one thread plus the render thread: those two get the big cores (see core_scan), the game's other
-// threads anything but the fastest. Cores by their top frequency. EOWRECOMP_AFFINITY=0: leave it to Android.
+// threads anything but the fastest. Cores by their top frequency. ITPRECOMP_AFFINITY=0: leave it to Android.
 static cpu_set_t g_core_sets[3];
 static bool g_core_on;
 
@@ -367,11 +367,11 @@ static void core_scan(void) {
     }
     for (int i = 0; i < n; i++) if (freq[i] < best && freq[i] > second) second = freq[i];
     for (int i = 0; i < n; i++) ntop += freq[i] == best, nsecond += freq[i] == second;
-    const char *e = getenv("EOWRECOMP_AFFINITY");
+    const char *e = getenv("ITPRECOMP_AFFINITY");
     if ((e && !strcmp(e, "0")) || ntop != 1 || !nsecond) return;  // (no single fastest core: nothing to do)
     for (int r = 0; r < 3; r++) CPU_ZERO(&g_core_sets[r]);
     // The render thread gets the fastest core (it's the busier one: the driver's work as well as ours - an S20 FE's
-    // dungeons got nearer 60 that way), the game's main thread the other big ones. EOWRECOMP_AFFINITY=main: the other
+    // dungeons got nearer 60 that way), the game's main thread the other big ones. ITPRECOMP_AFFINITY=main: the other
     // way round; =big: both on every big core, the scheduler choosing
     int mode = e && !strcmp(e, "main") ? 0 : e && !strcmp(e, "big") ? 2 : 1;
     for (int i = 0; i < n; i++) {
@@ -436,7 +436,7 @@ void plat_frame_work(uint64_t busy_ns, uint64_t target_ns) {
     static pthread_once_t once = PTHREAD_ONCE_INIT;
     static int64_t target;
     static bool failed;
-    const char *e = getenv("EOWRECOMP_PERF_HINT");
+    const char *e = getenv("ITPRECOMP_PERF_HINT");
     if (failed || (e && !atoi(e))) return;
     pthread_once(&once, hint_load);
     if (!g_hint_session) {
@@ -466,4 +466,4 @@ int plat_cpu_count(void) {
 }
 
 // (phones: in the log; the game keeps running)
-void plat_notice(const char *text) { __android_log_print(ANDROID_LOG_WARN, "EoWRecomp", "[notice] %s", text); }
+void plat_notice(const char *text) { __android_log_print(ANDROID_LOG_WARN, "ITPRecomp", "[notice] %s", text); }

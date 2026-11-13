@@ -1,4 +1,4 @@
-"""Guest call stack from a crash log: the backtrace's eowgame.so+<offset> frames -> recompiled function f_<addr>
+"""Guest call stack from a crash log: the backtrace's itpgame.so+<offset> frames -> recompiled function f_<addr>
 -> module + symbol (sym.py). Usage: symgame.py <log> [library]"""
 import bisect
 import re
@@ -8,7 +8,7 @@ import sys
 import sym
 
 log = open(sys.argv[1], errors='replace').read()
-lib = sys.argv[2] if len(sys.argv) > 2 else '../build/eowgame.so'
+lib = sys.argv[2] if len(sys.argv) > 2 else '../build/itpgame.so'
 rows = []
 for line in subprocess.run(['nm', lib], capture_output=True, text=True).stdout.splitlines():
     p = line.split()
@@ -16,11 +16,11 @@ for line in subprocess.run(['nm', lib], capture_output=True, text=True).stdout.s
         rows.append((int(p[0], 16), int(p[2][2:], 16)))
 rows.sort()
 addrs = [a for a, _ in rows]
-for off in re.findall(r'eowgame\.so\+([0-9a-f]+)', log):
+for off in re.findall(r'itpgame\.so\+([0-9a-f]+)', log):
     o = int(off, 16)
     i = bisect.bisect_right(addrs, o) - 1
     if i < 0:
-        print(f'  eowgame.so+{off}: ?')
+        print(f'  itpgame.so+{off}: ?')
         continue
     g = rows[i][1]
     r = sym.lookup(g)

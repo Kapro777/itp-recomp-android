@@ -39,10 +39,10 @@ bool ui_text_busy(void) {
 
 bool ui_input_text_cancelled(void) { return s_cancelled_now; }
 
-// (test) EOWRECOMP_FIELD_FOCUS=<label>:<n>[:edit]: the n-th time field <label> is drawn it gets the nav cursor (a
-// controller's A - EOWRECOMP_HOST_INPUT sdlpad:east - then opens the keyboard); :edit starts typing in it instead.
+// (test) ITPRECOMP_FIELD_FOCUS=<label>:<n>[:edit]: the n-th time field <label> is drawn it gets the nav cursor (a
+// controller's A - ITPRECOMP_HOST_INPUT sdlpad:east - then opens the keyboard); :edit starts typing in it instead.
 static int test_focus(const char *label) {
-    static const char *spec = getenv("EOWRECOMP_FIELD_FOCUS");
+    static const char *spec = getenv("ITPRECOMP_FIELD_FOCUS");
     static int count;
     if (!spec) return 0;
     const char *c = strchr(spec, ':');
@@ -65,7 +65,7 @@ bool ui_input_text(const char *label, char *buf, size_t size, ImGuiInputTextFlag
     if (in_view_id == id && in_view > 0 && in_view--) ImGui::SetScrollHereY(0.5f);
     if (test) fprintf(stderr, "[osk] test: %s field %s\n", test == 2 ? "typing in" : "cursor on", label);
     static std::string last;  // (test runs: what the field holds, as it changes)
-    const char *tf = getenv("EOWRECOMP_FIELD_FOCUS");
+    const char *tf = getenv("ITPRECOMP_FIELD_FOCUS");
     if (tf && !strncmp(tf, label, strlen(label)) && tf[strlen(label)] == ':' && last != buf) { last = buf; fprintf(stderr, "[osk] test: %s = \"%s\"%s\n", label, buf, g.ActiveId == id ? " (typing)" : ""); }
     s_cancelled_now = false;
     if (s.done && s.done_field == id && ImGui::GetFrameCount() - s.done_frame <= 1) {

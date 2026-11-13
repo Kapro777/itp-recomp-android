@@ -1,4 +1,4 @@
-# EoWRecomp build (derived from LAS Recomp, MIT)
+# ITPRecomp build (derived from LAS Recomp, MIT)
 # macOS: Homebrew clang/SDL3/FFmpeg, Metal renderer.
 # Windows: MSYS2 UCRT64 shell (see docs/BUILD-windows.md), clang + Vulkan renderer.
 # Linux: clang + Vulkan renderer, x86-64 or aarch64 (see docs/linux.md).
@@ -46,8 +46,8 @@ GENARCH  ?= -mcpu=x86_64_v3  # (zig's spelling of x86-64-v3)
 endif
 IMGUI    := third_party/imgui
 GENFLAGS := -O1 -fno-strict-aliasing -Wno-return-type -Wno-unused-label -fvisibility=hidden -Iruntime
-# FNPROF=1: game code with the function-entry profiler's hook (EOWRECOMP_FNPROF; runtime/cpu.h FN_ENTER)
-GENFLAGS += $(if $(FNPROF),-DEOWRECOMP_FNPROF)
+# FNPROF=1: game code with the function-entry profiler's hook (ITPRECOMP_FNPROF; runtime/cpu.h FN_ENTER)
+GENFLAGS += $(if $(FNPROF),-DITPRECOMP_FNPROF)
 
 # The game code (made by `make gen` from your own game files) is its own library next to the app (runtime/gamelib.h);
 # the app itself holds none of it
@@ -68,21 +68,21 @@ ifeq ($(PLATFORM),macos)
 SDL      := $(or $(DEPS),/opt/homebrew/opt/sdl3)
 FFMPEG   := $(or $(DEPS),/opt/homebrew/opt/ffmpeg)
 # MACOS_BACKEND: vulkan (default: the backend every other platform runs, through MoltenVK; Homebrew's molten-vk,
-# vulkan-loader, vulkan-headers, shaderc) or metal (LAS's renderer, not yet carried over to EoW)
+# vulkan-loader, vulkan-headers, shaderc) or metal (LAS's renderer, not yet carried over to ITP)
 MACOS_BACKEND ?= vulkan
 # (MoltenVK and the Vulkan headers: from Homebrew; the loader and shaderc too, or from DEPS when set: make app)
 VKSDK    ?= /opt/homebrew
-EXE      := $(B)/eowrecomp
+EXE      := $(B)/itprecomp
 DEPINC   := -I$(SDL)/include -I$(FFMPEG)/include
 LDFLAGS  := -L$(SDL)/lib -lSDL3 -Wl,-rpath,$(SDL)/lib -L$(FFMPEG)/lib -lavformat -lavcodec -lavutil -lswscale -Wl,-rpath,$(FFMPEG)/lib \
             -framework CoreFoundation -framework Foundation -framework QuartzCore -framework AppKit -framework ImageIO -framework CoreGraphics -framework UniformTypeIdentifiers
 ifeq ($(MACOS_BACKEND),metal)
-OSFLAGS  := -DEOW_METAL
+OSFLAGS  := -DITP_METAL
 LDFLAGS  += -framework Metal -framework MetalFX
 BACKEND_SRC := $(wildcard runtime/nvn/*.m)
 BACKEND_OBJ := $(patsubst runtime/%.m,$(B)/rt/%.o,$(BACKEND_SRC))
 IMGUI_OBJ += $(B)/imgui/imgui_impl_metal.o
-UIFLAGS  := -fobjc-arc -DEOW_METAL
+UIFLAGS  := -fobjc-arc -DITP_METAL
 else
 OSFLAGS  := -Wno-format -Wno-nullability-completeness  # (VMA's header)
 DEPINC   += -I$(VKSDK)/include -Ibuild/deps-macos/include
@@ -92,11 +92,11 @@ BACKEND_OBJ := $(patsubst runtime/%.cpp,$(B)/rt/%.o,$(patsubst runtime/%.c,$(B)/
 IMGUI_OBJ += $(B)/imgui/imgui_impl_vulkan.o
 UIFLAGS  := -fobjc-arc
 endif
-GAMELIB  := $(B)/eowgame.dylib
+GAMELIB  := $(B)/itpgame.dylib
 GAMELIB_LDFLAGS := -dynamiclib -undefined dynamic_lookup  # (the runtime functions it calls: the app's own)
 GAMELIB_SHARED := -shared -Wl,-undefined,dynamic_lookup  # (the same, for the start screen's build: zig cc)
 else ifeq ($(PLATFORM),linux)
-EXE      := $(B)/eowrecomp
+EXE      := $(B)/itprecomp
 DEPINC   := $(if $(DEPS),-I$(DEPS)/include)
 ifeq ($(ARCH),x86_64)
 GENARCH  ?= -march=x86-64-v3  # as on Windows: AVX2 + FMA for the lifted FP/SIMD code (checked at startup)
@@ -111,28 +111,28 @@ BACKEND_SRC := $(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/
 BACKEND_OBJ := $(patsubst runtime/%.cpp,$(B)/rt/%.o,$(patsubst runtime/%.c,$(B)/rt/%.o,$(BACKEND_SRC)))
 IMGUI_OBJ += $(B)/imgui/imgui_impl_vulkan.o
 UIFLAGS  := -x c++  # the .mm UI sources are plain C++ apart from __APPLE__ blocks
-GAMELIB  := $(B)/eowgame.so
+GAMELIB  := $(B)/itpgame.so
 GAMELIB_LDFLAGS := -shared -fuse-ld=lld  # (the runtime functions it calls: the app's own, -rdynamic)
 GAMELIB_SHARED := -shared
 else
-EXE      := $(B)/eowrecomp.exe
+EXE      := $(B)/itprecomp.exe
 DEPINC   := $(if $(DEPS),-I$(DEPS)/include)
 OSFLAGS  := -D_FILE_OFFSET_BITS=64 -D_POSIX_THREAD_SAFE_FUNCTIONS -D_CRT_RAND_S -DWIN32_LEAN_AND_MEAN -DNOMINMAX
 GENARCH  ?= -march=x86-64-v3  # AVX2 + FMA for the lifted FP/SIMD code (simd.h); override for older CPUs
 GENFLAGS += -D_FILE_OFFSET_BITS=64 $(GENARCH)
 LDFLAGS  := -fuse-ld=lld -Wl,--stack,16777216 $(if $(DEPS),-L$(DEPS)/lib) -lSDL3 -lavformat -lavcodec -lavutil -lswscale \
             -lvulkan-1 -lwinmm -lole32 -lshell32 -lcomdlg32 -luuid -lshaderc_shared \
-            $(if $(RELEASE),-Wl$(comma)--subsystem$(comma)windows)  # release: no console window (log -> eowrecomp.log)
+            $(if $(RELEASE),-Wl$(comma)--subsystem$(comma)windows)  # release: no console window (log -> itprecomp.log)
 BACKEND_SRC := $(wildcard runtime/nvn/vulkan/*.c) $(wildcard runtime/nvn/vulkan/*.cpp)
 BACKEND_OBJ := $(patsubst runtime/%.cpp,$(B)/rt/%.o,$(patsubst runtime/%.c,$(B)/rt/%.o,$(BACKEND_SRC)))
 BACKEND_OBJ += $(if $(wildcard docs/icon/icon.ico),$(B)/rt/platform/windows_rc.o)  # the .exe's icon (none yet)
 WINDRES  ?= windres
 IMGUI_OBJ += $(B)/imgui/imgui_impl_vulkan.o
 UIFLAGS  := -x c++ $(OSFLAGS)  # the .mm UI sources are plain C++ apart from __APPLE__ blocks
-GAMELIB  := $(B)/eowgame.dll
+GAMELIB  := $(B)/itpgame.dll
 # the runtime functions it calls (RT_API in runtime/cpu.h): exported by the .exe, imported through an import library
-# made from tools/windows/eowrecomp.def
-IMPLIB   := $(B)/eowrecomp.lib
+# made from tools/windows/itprecomp.def
+IMPLIB   := $(B)/itprecomp.lib
 GAMELIB_LDFLAGS := -shared -fuse-ld=lld $(IMPLIB)
 GAMELIB_SHARED := -shared  # (+ the import library: runtime/gamebuild.c)
 endif
@@ -145,8 +145,8 @@ GAMELIB_SRCS := tools/gen.py tools/lifter.py tools/analyze.py tools/nso.py tools
 GAMELIB_ID := $(shell (cat $(GAMELIB_SRCS); echo '$(GENFLAGS)') | (shasum -a 256 2>/dev/null || sha256sum) | cut -c1-16)
 
 RT_OBJ   := $(patsubst runtime/%.c,$(B)/rt/%.o,$(RT_SRC))
-RTFLAGS  := -O2 -g -fno-strict-aliasing -Wall -Wno-unused-function -DEOW_RUNTIME -Iruntime -Iruntime/nvn $(DEPINC) $(OSFLAGS)
-CXXFLAGS := -O2 -g -std=c++17 -DEOW_RUNTIME -I$(IMGUI) -I$(IMGUI)/backends -Iruntime -Iruntime/nvn $(DEPINC)
+RTFLAGS  := -O2 -g -fno-strict-aliasing -Wall -Wno-unused-function -DITP_RUNTIME -Iruntime -Iruntime/nvn $(DEPINC) $(OSFLAGS)
+CXXFLAGS := -O2 -g -std=c++17 -DITP_RUNTIME -I$(IMGUI) -I$(IMGUI)/backends -Iruntime -Iruntime/nvn $(DEPINC)
 
 all: $(EXE) $(if $(GEN_SRC),$(GAMELIB))
 
@@ -194,9 +194,9 @@ $(EXE): $(RT_OBJ) $(BACKEND_OBJ) $(UI_OBJ) $(IMGUI_OBJ)
 	mv -f $(dir $@)link/$(notdir $@) $@
 
 ifeq ($(PLATFORM),windows)
-$(IMPLIB): tools/windows/eowrecomp.def
+$(IMPLIB): tools/windows/itprecomp.def
 	@mkdir -p $(dir $@)
-	$(or $(ZIG),zig) dlltool -m i386:x86-64 -D eowrecomp.exe -d $< -l $@
+	$(or $(ZIG),zig) dlltool -m i386:x86-64 -D itprecomp.exe -d $< -l $@
 $(GAMELIB): $(IMPLIB)
 endif
 
@@ -239,7 +239,7 @@ $(B)/rt/platform/windows_rc.o: runtime/platform/windows.rc docs/icon/icon.ico
 	@mkdir -p $(dir $@)
 	$(WINDRES) -I docs/icon -O coff $< -o $@
 
-# The game code generator as a standalone helper (PyInstaller, tools/eowgen.spec): build/helper/eowgen/, for the start
+# The game code generator as a standalone helper (PyInstaller, tools/itpgen.spec): build/helper/itpgen/, for the start
 # screen's setup on the player's machine (runtime/gamebuild.c). GEN_VENV: its venv (make app: one on build/deps'
 # Python, which runs on older macOS than Homebrew's).
 GEN_PY  ?= $(if $(filter windows,$(PLATFORM)),py -3.12,python3)
@@ -249,24 +249,24 @@ GEN_VPY := $(if $(filter windows,$(PLATFORM)),$(GEN_VENV)/Scripts/python.exe,$(G
 gen-helper: $(GEN_VENV)/.ok
 	$(if $(filter windows,$(PLATFORM)),USERPROFILE="$$(cygpath -w ~ 2>/dev/null || echo $$HOME)") \
 	$(GEN_VPY) -m PyInstaller --noconfirm --clean --log-level WARN --distpath build/helper --workpath build/pyinstaller \
-	    tools/eowgen.spec
-	$(if $(filter windows,$(PLATFORM)),$(GEN_VPY) tools/pe_no_cfg.py build/helper/eowgen/eowgen.exe)
-	@du -sh build/helper/eowgen
+	    tools/itpgen.spec
+	$(if $(filter windows,$(PLATFORM)),$(GEN_VPY) tools/pe_no_cfg.py build/helper/itpgen/itpgen.exe)
+	@du -sh build/helper/itpgen
 
 $(GEN_VENV)/.ok:
 	$(GEN_PY) -m venv $(GEN_VENV)
 	$(GEN_VPY) -m pip install -q capstone==5.0.9 unicorn==2.1.4 lz4==4.4.5 pyinstaller==6.22.3
 	touch $@
 
-# make app (macOS): build/EoWRecomp.app to ship - the runtime built against build/deps (tools/build_deps_macos.sh:
+# make app (macOS): build/ITPRecomp.app to ship - the runtime built against build/deps (tools/build_deps_macos.sh:
 # LGPL-only FFmpeg, SDL3), MoltenVK, and what the start screen builds the game code with (the generator helper, zig).
 # No game code or files inside (tools/bundle_macos.sh checks). For macOS 15+ (build/deps' minimum) unless MACOS_MIN.
 APP_MIN := $(or $(MACOS_MIN),15.0)
 app:
-	$(MAKE) B=build/rel DEPS=$(CURDIR)/build/deps MACOS_MIN=$(APP_MIN) build/rel/eowrecomp
+	$(MAKE) B=build/rel DEPS=$(CURDIR)/build/deps MACOS_MIN=$(APP_MIN) build/rel/itprecomp
 	$(MAKE) gen-helper GEN_PY=build/deps/python/bin/python3 GEN_VENV=build/gen-venv-rel
 	[ -x build/zig/zig ] || tools/fetch_zig.sh
-	MACOS_MIN=$(APP_MIN) tools/bundle_macos.sh build/rel/eowrecomp
+	MACOS_MIN=$(APP_MIN) tools/bundle_macos.sh build/rel/itprecomp
 
 .PHONY: all gen gen-helper gen-objs runtime-objs app
 

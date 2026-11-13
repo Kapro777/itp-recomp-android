@@ -94,9 +94,9 @@ static MtlFormat mtl_format(uint32_t f) {
     case 0x49: return (MtlFormat){MTLPixelFormatBC4_RUnorm};
     case 0x4A: return (MtlFormat){MTLPixelFormatBC4_RSnorm};
     case 0x4B: return (MtlFormat){MTLPixelFormatBC5_RGUnorm};
-    // 0x4C = signed RGTC2 (interior normal maps break if decoded unsigned). EOWRECOMP_BC5_UNORM=1 decodes it
+    // 0x4C = signed RGTC2 (interior normal maps break if decoded unsigned). ITPRECOMP_BC5_UNORM=1 decodes it
     // unsigned: that removes the overworld grass hatch/moire (see notes/PLAN.md) but wrecks interiors.
-    case 0x4C: return (MtlFormat){getenv("EOWRECOMP_BC5_UNORM") ? MTLPixelFormatBC5_RGUnorm : MTLPixelFormatBC5_RGSnorm};
+    case 0x4C: return (MtlFormat){getenv("ITPRECOMP_BC5_UNORM") ? MTLPixelFormatBC5_RGUnorm : MTLPixelFormatBC5_RGSnorm};
     case 0x4D: return (MtlFormat){MTLPixelFormatBC7_RGBAUnorm};
     case 0x4E: return (MtlFormat){MTLPixelFormatBC7_RGBAUnorm_sRGB};
     case 0x4F: return (MtlFormat){MTLPixelFormatBC6H_RGBFloat};
@@ -160,7 +160,7 @@ typedef struct {
     bool presented;      // has been shown by backend_present (a swapchain image)
     uint64_t touched_frame;  // last frame it was written (cleared at the first write of a frame when reshaped)
     uint32_t level_gen;      // g_level_gen when last used as a render target
-    uint64_t frame_cleared;  // EOWRECOMP_FRAME_CLEAR: frame it was last cleared at first use
+    uint64_t frame_cleared;  // ITPRECOMP_FRAME_CLEAR: frame it was last cleared at first use
     float sx, sy;        // allocation scale relative to the guest's size
     int reg;             // slot in g_reg (live textures, for the "largest textures" dump) + 1
     int tp;              // runtime/nvn/texpatch.c: 0 not checked yet, -1 none, else known UI texture + 1
@@ -217,7 +217,7 @@ void renderer_get_scale(float *sx, float *sy) { *sx = g_rs_x; *sy = g_rs_y; }
 void renderer_set_scale(float sx, float sy) { g_rs_x = sx; g_rs_y = sy; }
 
 static bool tex_scalable(const NvnTexture *t) {
-    if (getenv("EOWRECOMP_NO_SCALE")) return false;
+    if (getenv("ITPRECOMP_NO_SCALE")) return false;
     if (t->target != 1 || t->samples > 1 || !(t->flags & 8) || t->width < 32 || t->height < 16) return false;
     float a = (float)t->width / (float)t->height;
     return a > 1.74f && a < 1.81f;  // 16:9 (1920x1080 and its fractions, 704x396, 60x33...)
@@ -237,7 +237,7 @@ bool renderer_texture_first_write(NvnTexture *t) {
 
 // A new level gets fresh render-target memory on the Switch (black); ours keep the previous level's pixels, which
 // show wherever a level never draws (the phone booth's surroundings). Render targets are cleared at their first
-// use after a level change (EOWRECOMP_KEEP_TARGETS=1 disables).
+// use after a level change (ITPRECOMP_KEEP_TARGETS=1 disables).
 static uint32_t g_level_gen = 1;
 static void level_change_check(void) {
     extern const char *game_level_name(void);
@@ -247,16 +247,16 @@ static void level_change_check(void) {
         strlcpy(last, lv, sizeof last);
         // only levels that never draw their surroundings: clearing everywhere also wipes targets other rooms
         // carry over (a house lost a band of its walls)
-        if (!strncmp(lv, "TelephoneBox", 12) || getenv("EOWRECOMP_CLEAR_ALL_LEVELS")) g_level_gen++;
+        if (!strncmp(lv, "TelephoneBox", 12) || getenv("ITPRECOMP_CLEAR_ALL_LEVELS")) g_level_gen++;
     }
 }
-// Scene render targets are cleared to transparent black at their first use in each frame (EOWRECOMP_NO_FRAME_CLEAR=1
+// Scene render targets are cleared to transparent black at their first use in each frame (ITPRECOMP_NO_FRAME_CLEAR=1
 // disables): pixels a frame never draws (inside pits, around generated rooms) otherwise keep older frames' content
 // and smear (moving enemies over a pit left trails, the pit rim repeated downwards). Verified 2026-10-08 on
 // rando/DevGen3 Tail Cave 07D: clean dark pit, no trails; overworld / dungeon rooms otherwise unchanged.
 bool renderer_texture_frame_fresh(NvnTexture *t) {
     static int on = -1;
-    if (on < 0) on = getenv("EOWRECOMP_NO_FRAME_CLEAR") == NULL;
+    if (on < 0) on = getenv("ITPRECOMP_NO_FRAME_CLEAR") == NULL;
     TexBackend *b = t ? (TexBackend *)t->backend : NULL;
     if (!on || !b || !b->scalable || b->frame_cleared == total_frames + 1) return false;
     b->frame_cleared = total_frames + 1;
@@ -266,13 +266,13 @@ bool renderer_texture_frame_fresh(NvnTexture *t) {
 bool renderer_texture_level_fresh(NvnTexture *t) {
     TexBackend *b = t ? (TexBackend *)t->backend : NULL;
     static int keep = -1;
-    if (keep < 0) keep = getenv("EOWRECOMP_KEEP_TARGETS") != NULL;
+    if (keep < 0) keep = getenv("ITPRECOMP_KEEP_TARGETS") != NULL;
     if (!b || keep || b->level_gen == g_level_gen) return false;
     if (!b->scalable) { b->level_gen = g_level_gen; return false; }  // scene buffers only: UI textures the game draws once
                                                                        // and reuses (rupee counter) must keep their contents
     bool fresh = b->level_gen != 0;  // first use ever: nothing stale to hide
     b->level_gen = g_level_gen;
-    if (fresh && getenv("EOWRECOMP_LOG_LEVELCLEAR"))
+    if (fresh && getenv("ITPRECOMP_LOG_LEVELCLEAR"))
         LOG("[levelclear] gen %u frame %llu tex %p %ux%u fmt %#x addr %llx\n", g_level_gen, (unsigned long long)total_frames, (void *)t,
             t->width, t->height, t->format, (unsigned long long)t->addr);
     return fresh;
@@ -325,7 +325,7 @@ static TexBackend *tex_backend(NvnTexture *t) {
     }
     TexBackend *b = calloc(1, sizeof *b);
     b->scalable = tex_scalable(t);
-    if (t->width == 1920 && t->height == 1080 && getenv("EOWRECOMP_LOG_SCALABLE"))
+    if (t->width == 1920 && t->height == 1080 && getenv("ITPRECOMP_LOG_SCALABLE"))
         LOG("[scale] 1920x1080 tex %p f%#x flags %#x target %u samples %u levels %u -> scalable %d (%s)\n", (void *)t, t->format,
             t->flags, t->target, t->samples, t->levels, b->scalable, t->label);
     create_backend_texture(t, b);
@@ -451,7 +451,7 @@ static void upload_texture(NvnTexture *t, TexBackend *b, id<MTLBlitCommandEncode
     if (full_hash_budget_frame != g_frame_counter) { full_hash_budget_frame = g_frame_counter; full_hash_budget = 4 << 20; }
     const uint8_t *mem = (const uint8_t *)(uintptr_t)t->addr;
     static int always_full = -1;
-    if (always_full < 0) always_full = getenv("EOWRECOMP_TEX_FULLHASH") ? 1 : 0;
+    if (always_full < 0) always_full = getenv("ITPRECOMP_TEX_FULLHASH") ? 1 : 0;
     bool full = b->dynamic || !b->uploaded || always_full;
     if (!full && g_frame_counter - b->full_frame >= 120 && full_hash_budget >= total) { full = true; full_hash_budget -= total; }
     if (!b->tp) b->tp = texpatch_identify(t) + 1;  // (button prompts / Hero Mode icon: re-uploaded when their look changes)
@@ -489,8 +489,8 @@ static void upload_texture(NvnTexture *t, TexBackend *b, id<MTLBlitCommandEncode
             if (b->tp > 0 && layer == 0) texpatch_apply(b->tp - 1, lv, lin, l.w, l.h, row);
             uint8_t *data = lin;
             uint32_t out_row = row;
-            static int bc5log;  // EOWRECOMP_LOG_BC5: endpoint bytes of BC5 (0x4B/0x4C) textures (unorm ~128 vs snorm ~0)
-            if ((t->format == 0x4B || t->format == 0x4C) && lv == 0 && bc5log < 12 && getenv("EOWRECOMP_LOG_BC5")) {
+            static int bc5log;  // ITPRECOMP_LOG_BC5: endpoint bytes of BC5 (0x4B/0x4C) textures (unorm ~128 vs snorm ~0)
+            if ((t->format == 0x4B || t->format == 0x4C) && lv == 0 && bc5log < 12 && getenv("ITPRECOMP_LOG_BC5")) {
                 bc5log++;
                 int hist[4] = {0};
                 for (uint64_t i = 0; i + 16 <= sz; i += 16) { hist[lin[i] >> 6]++; hist[lin[i + 8] >> 6]++; }
@@ -585,11 +585,11 @@ void backend_init(void) {
                                            options:MTLResourceStorageModeShared deallocator:nil];
     if (!g_guest_buffer) FATAL("cannot wrap guest heap in a Metal buffer (max %llu)\n", (uint64_t)dev.maxBufferLength);
     renderer_init(dev);
-    if (getenv("EOWRECOMP_ASPECT_TEST")) {  // experiment: widen the game's 16:9 aspect constant
+    if (getenv("ITPRECOMP_ASPECT_TEST")) {  // experiment: widen the game's 16:9 aspect constant
         float *k = (float *)(uintptr_t)0x70016afba4ull;
         mprotect((void *)((uintptr_t)k & ~0x3fffull), 0x4000, PROT_READ | PROT_WRITE);
-        LOG("[aspect] constant %f -> %f\n", *k, (float)atof(getenv("EOWRECOMP_ASPECT_TEST")));
-        *k = (float)atof(getenv("EOWRECOMP_ASPECT_TEST"));
+        LOG("[aspect] constant %f -> %f\n", *k, (float)atof(getenv("ITPRECOMP_ASPECT_TEST")));
+        *k = (float)atof(getenv("ITPRECOMP_ASPECT_TEST"));
     }
     LOG("[metal] %s, heap buffer %llu MB\n", dev.name.UTF8String, (uint64_t)HEAP_MAX >> 20);
 }
@@ -1042,12 +1042,12 @@ void backend_present(NvnTexture *t) {
             [enc drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
         }
         [enc endEncoding];
-        static long menu_at = -1;  // test hook: open the menu at this frame (EOWRECOMP_MENU_AT)
-        if (menu_at < 0) menu_at = getenv("EOWRECOMP_MENU_AT") ? atol(getenv("EOWRECOMP_MENU_AT")) : 0;
+        static long menu_at = -1;  // test hook: open the menu at this frame (ITPRECOMP_MENU_AT)
+        if (menu_at < 0) menu_at = getenv("ITPRECOMP_MENU_AT") ? atol(getenv("ITPRECOMP_MENU_AT")) : 0;
         if (menu_at && (long)total_frames + 1 == menu_at) { extern void menu_test_open(void); menu_test_open(); }
         menu_render(dev, cb, drawable.texture);
-        static long win_shot = -1;  // EOWRECOMP_WINDOW_SHOT=<frame>: save the final window image (game + menu)
-        if (win_shot < 0) win_shot = getenv("EOWRECOMP_WINDOW_SHOT") ? atol(getenv("EOWRECOMP_WINDOW_SHOT")) : 0;
+        static long win_shot = -1;  // ITPRECOMP_WINDOW_SHOT=<frame>: save the final window image (game + menu)
+        if (win_shot < 0) win_shot = getenv("ITPRECOMP_WINDOW_SHOT") ? atol(getenv("ITPRECOMP_WINDOW_SHOT")) : 0;
         id<MTLTexture> shot_tex = nil;
         extern char g_window_shot_request[256];  // test hooks (runtime/hle/hookshot.c): save the next frame here
         if ((win_shot && (long)total_frames + 1 == win_shot) || g_window_shot_request[0]) {
@@ -1063,14 +1063,14 @@ void backend_present(NvnTexture *t) {
         [cb commit];
         if (shot_tex) {
             [cb waitUntilCompleted];
-            // EOWRECOMP_SHOT_PATH: where (parallel test runs each write their own; default build/window.png)
+            // ITPRECOMP_SHOT_PATH: where (parallel test runs each write their own; default build/window.png)
             g_save_upright = true;
             if (g_window_shot_request[0]) {
                 renderer_save_texture(shot_tex, g_window_shot_request);
                 g_window_shot_request[0] = 0;
             } else {
-                renderer_save_texture(shot_tex, getenv("EOWRECOMP_SHOT_PATH") ? getenv("EOWRECOMP_SHOT_PATH") : "build/window.png");
-                if (getenv("EOWRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
+                renderer_save_texture(shot_tex, getenv("ITPRECOMP_SHOT_PATH") ? getenv("ITPRECOMP_SHOT_PATH") : "build/window.png");
+                if (getenv("ITPRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
             }
             g_save_upright = false;
         }
@@ -1080,39 +1080,39 @@ void backend_present(NvnTexture *t) {
     g_frame_counter++;
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
-    static long slow_ms = -1;  // EOWRECOMP_SLOW_FRAME_MS=<ms>: sleep per presented frame (simulate a slow machine)
-    if (slow_ms < 0) slow_ms = getenv("EOWRECOMP_SLOW_FRAME_MS") ? atol(getenv("EOWRECOMP_SLOW_FRAME_MS")) : 0;
+    static long slow_ms = -1;  // ITPRECOMP_SLOW_FRAME_MS=<ms>: sleep per presented frame (simulate a slow machine)
+    if (slow_ms < 0) slow_ms = getenv("ITPRECOMP_SLOW_FRAME_MS") ? atol(getenv("ITPRECOMP_SLOW_FRAME_MS")) : 0;
     if (slow_ms > 0 && total_frames > 2600) usleep((useconds_t)slow_ms * 1000);
     extern void fnprof_frame(uint64_t frame);
     fnprof_frame(total_frames);
     extern void warp_frame(uint64_t frame);
     warp_frame(total_frames);
-    extern void reboot_test_frame(uint64_t frame);  // runtime/main.c (EOWRECOMP_REBOOT_AT)
+    extern void reboot_test_frame(uint64_t frame);  // runtime/main.c (ITPRECOMP_REBOOT_AT)
     reboot_test_frame(total_frames);
     extern void save_editor_frame(uint64_t frame);
     save_editor_frame(total_frames);
     static long shot_every = -1;
-    if (shot_every < 0) { const char *e = getenv("EOWRECOMP_SCREENSHOT_EVERY"); shot_every = e ? atol(e) : 0; }
+    if (shot_every < 0) { const char *e = getenv("ITPRECOMP_SCREENSHOT_EVERY"); shot_every = e ? atol(e) : 0; }
     extern bool g_debug_frame;
     static long debug_at = -1;
-    if (debug_at < 0) { const char *e = getenv("EOWRECOMP_DEBUG_FRAME"); debug_at = e ? atol(e) : 0; }
+    if (debug_at < 0) { const char *e = getenv("ITPRECOMP_DEBUG_FRAME"); debug_at = e ? atol(e) : 0; }
     level_change_check();
     extern volatile int g_debug_frame_request;
     if (g_debug_frame_request) { g_debug_frame_request = 0; debug_at = (long)total_frames + 1; }
     g_debug_frame = debug_at && total_frames == (uint64_t)debug_at;
     if (g_debug_frame) LOG("===== debug frame %llu =====\n", total_frames);
-    static long shot_from = -1;  // EOWRECOMP_SCREENSHOT_FROM=<frame>: periodic shots start there (into build/frames/)
-    if (shot_from < 0) { const char *e = getenv("EOWRECOMP_SCREENSHOT_FROM"); shot_from = e ? atol(e) : 0; }
+    static long shot_from = -1;  // ITPRECOMP_SCREENSHOT_FROM=<frame>: periodic shots start there (into build/frames/)
+    if (shot_from < 0) { const char *e = getenv("ITPRECOMP_SCREENSHOT_FROM"); shot_from = e ? atol(e) : 0; }
     if (shot_every && b && b->tex && total_frames % shot_every == 0 && (long)total_frames >= shot_from) {
         char path[256];
         if (shot_from) mkdir("build/frames", 0755);
         snprintf(path, sizeof path, shot_from ? "build/frames/frame_%05llu.png" : "build/frame_%05llu.png", total_frames);
         save_png(b->tex, path);
-        if (getenv("EOWRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
+        if (getenv("ITPRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
     }
     double now = SDL_GetTicks() / 1000.0;
-    static double fps_iv = -1, prev_present, max_gap;  // EOWRECOMP_FPS_INTERVAL=<s>: fps line period (default 2)
-    if (fps_iv < 0) fps_iv = getenv("EOWRECOMP_FPS_INTERVAL") ? atof(getenv("EOWRECOMP_FPS_INTERVAL")) : 2.0;
+    static double fps_iv = -1, prev_present, max_gap;  // ITPRECOMP_FPS_INTERVAL=<s>: fps line period (default 2)
+    if (fps_iv < 0) fps_iv = getenv("ITPRECOMP_FPS_INTERVAL") ? atof(getenv("ITPRECOMP_FPS_INTERVAL")) : 2.0;
     if (prev_present > 0 && now - prev_present > max_gap) max_gap = now - prev_present;
     prev_present = now;
     if (now - last_fps_time >= fps_iv) {
@@ -1143,21 +1143,21 @@ void ui_window_init(void) {
     settings_load();
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) FATAL("SDL_Init: %s\n", SDL_GetError());
     int win_w = 1280, win_h = 720;
-    if (getenv("EOWRECOMP_WINDOW")) sscanf(getenv("EOWRECOMP_WINDOW"), "%dx%d", &win_w, &win_h);
-    // EOWRECOMP_HIDDEN=1: never shown (automated test runs render off screen without taking the user's focus)
+    if (getenv("ITPRECOMP_WINDOW")) sscanf(getenv("ITPRECOMP_WINDOW"), "%dx%d", &win_w, &win_h);
+    // ITPRECOMP_HIDDEN=1: never shown (automated test runs render off screen without taking the user's focus)
     SDL_WindowFlags wflags = SDL_WINDOW_METAL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    if (getenv("EOWRECOMP_HIDDEN")) wflags |= SDL_WINDOW_HIDDEN;
-    window = SDL_CreateWindow("EoWRecomp", win_w, win_h, wflags);
+    if (getenv("ITPRECOMP_HIDDEN")) wflags |= SDL_WINDOW_HIDDEN;
+    window = SDL_CreateWindow("ITPRecomp", win_w, win_h, wflags);
     if (!window) FATAL("SDL_CreateWindow: %s\n", SDL_GetError());
     rt_window_icon(window);
     // the Fullscreen setting applies from the start screen on (not only once the game runs); test windows stay windows
-    if (g_settings.fullscreen && !getenv("EOWRECOMP_WINDOW") && !getenv("EOWRECOMP_HIDDEN")) SDL_SetWindowFullscreen(window, true);
+    if (g_settings.fullscreen && !getenv("ITPRECOMP_WINDOW") && !getenv("ITPRECOMP_HIDDEN")) SDL_SetWindowFullscreen(window, true);
     SDL_MetalView view = SDL_Metal_CreateView(window);
     layer = (__bridge CAMetalLayer *)SDL_Metal_GetLayer(view);
     dev = MTLCreateSystemDefaultDevice();
     layer.device = dev;
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-    layer.framebufferOnly = getenv("EOWRECOMP_WINDOW_SHOT") ? NO : YES;
+    layer.framebufferOnly = getenv("ITPRECOMP_WINDOW_SHOT") ? NO : YES;
 }
 
 SDL_Window *ui_window(void) { return window; }

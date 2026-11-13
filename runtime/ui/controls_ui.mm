@@ -19,7 +19,7 @@ static void cell(int dev, int slot, int fam, int cap_dev, int cap_slot, int ms_l
                           (ms_left + 999) / 1000, dev, slot);
     else snprintf(lbl, sizeof lbl, "%s##%d_%d", dev == BIND_DEV_PAD ? bind_pad_label(g_bind_pad[slot], fam) :
                                                  bind_key_label(g_bind_key[slot]), dev, slot);
-    // changed from the default: gold text; the same button / key on two inputs (a hand-edited eowrecomp.ini): red
+    // changed from the default: gold text; the same button / key on two inputs (a hand-edited itprecomp.ini): red
     const int16_t *t = dev == BIND_DEV_PAD ? g_bind_pad : g_bind_key;
     int n = dev == BIND_DEV_PAD ? BIND_PAD_COUNT : BIND_KEY_COUNT, pushed = 0;
     bool dup = false;
@@ -54,7 +54,7 @@ extern "C" void controls_bindings_draw(float scale) {
 
     int cd, cs, ms;
     bind_capture_active(&cd, &cs, &ms);
-    // a finished capture: say what happened, keep eowrecomp.ini current
+    // a finished capture: say what happened, keep itprecomp.ini current
     static int seen_serial = -1;
     static char msg[200];
     int rdev, rslot, rother, serial;

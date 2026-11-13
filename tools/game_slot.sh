@@ -1,9 +1,9 @@
-# Sourced by the test scripts before they start ./build/eowrecomp: a new test copy of the game starts only while the
+# Sourced by the test scripts before they start ./build/itprecomp: a new test copy of the game starts only while the
 # Mac has at least 10 GB free (each copy takes ~2 GB; too many at once ran it out of memory). Launches are taken one
 # at a time and the next waits ~20 s, so the copy just started has grown before memory is measured again.
-# EOWRECOMP_MIN_FREE_GB (default 10), EOWRECOMP_SLOT_DIR.
-GAME_MIN_FREE_GB=${EOWRECOMP_MIN_FREE_GB:-10}
-GAME_SLOT_DIR=${EOWRECOMP_SLOT_DIR:-$HOME/.cache/eowrecomp_test_slots}
+# ITPRECOMP_MIN_FREE_GB (default 10), ITPRECOMP_SLOT_DIR.
+GAME_MIN_FREE_GB=${ITPRECOMP_MIN_FREE_GB:-10}
+GAME_SLOT_DIR=${ITPRECOMP_SLOT_DIR:-$HOME/.cache/itprecomp_test_slots}
 mkdir -p "$GAME_SLOT_DIR"
 game_free_gb() {  # free + inactive + speculative + purgeable pages (what macOS can hand out without swapping)
     vm_stat | awk '/page size of/ {ps = $8} /Pages (free|inactive|speculative|purgeable):/ {gsub("\\.", "", $NF); n += $NF}
@@ -20,10 +20,10 @@ echo $$ > "$L/pid"
 until [ "$(game_free_gb)" -ge "$GAME_MIN_FREE_GB" ]; do sleep 5; done
 ( sleep 20; rm -rf "$L" ) >/dev/null 2>&1 &
 GAME_SLOT=  # (nothing to release at exit)
-# test runs never write the player's eowrecomp.ini: a scratch copy unless the caller gave EOWRECOMP_SETTINGS
-if [ -z "$EOWRECOMP_SETTINGS" ]; then
+# test runs never write the player's itprecomp.ini: a scratch copy unless the caller gave ITPRECOMP_SETTINGS
+if [ -z "$ITPRECOMP_SETTINGS" ]; then
     mkdir -p build/test_ini
-    EOWRECOMP_SETTINGS="build/test_ini/settings_$$.ini"
-    cp eowrecomp.ini "$EOWRECOMP_SETTINGS" 2>/dev/null || : > "$EOWRECOMP_SETTINGS"
-    export EOWRECOMP_SETTINGS
+    ITPRECOMP_SETTINGS="build/test_ini/settings_$$.ini"
+    cp itprecomp.ini "$ITPRECOMP_SETTINGS" 2>/dev/null || : > "$ITPRECOMP_SETTINGS"
+    export ITPRECOMP_SETTINGS
 fi

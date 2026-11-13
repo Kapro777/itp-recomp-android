@@ -30,10 +30,10 @@ static uint8_t keys_down[SDL_SCANCODE_COUNT];
 static SDL_Gamepad *pad;
 static _Atomic int64_t sampling;
 
-// Host keys / buttons held by a test script (EOWRECOMP_HOST_INPUT, input_frame): they go through the bindings
+// Host keys / buttons held by a test script (ITPRECOMP_HOST_INPUT, input_frame): they go through the bindings
 static uint8_t test_keys[SDL_SCANCODE_COUNT];
 static _Atomic uint32_t test_pad;
-static _Atomic int32_t test_lx, test_ly;  // (a resting stick's drift: "lstick" in EOWRECOMP_HOST_INPUT)
+static _Atomic int32_t test_lx, test_ly;  // (a resting stick's drift: "lstick" in ITPRECOMP_HOST_INPUT)
 static bool host_test;  // (then a real controller is left out: the player's own pad must not spoil the test)
 
 static int held_key(int sc) { return sc > 0 && sc < SDL_SCANCODE_COUNT && (keys_down[sc] || test_keys[sc]); }
@@ -78,7 +78,7 @@ void input_reset(void) {
 
 volatile int g_debug_frame_request;  // F9: dump the next frame's passes (build/pass_*.png) + draw log
 
-// Events a test pushes (EOWRECOMP_HOST_INPUT type: / sdlkey: / sdlpad:) carry this device id: they go the whole way, menu first.
+// Events a test pushes (ITPRECOMP_HOST_INPUT type: / sdlkey: / sdlpad:) carry this device id: they go the whole way, menu first.
 #define TEST_DEVICE 0x7E57u
 static bool test_event(const SDL_Event *e) {
     switch (e->type) {
@@ -90,18 +90,18 @@ static bool test_event(const SDL_Event *e) {
 }
 
 // Scripted test runs ignore the user's own input (a key or stick touched while a test drives Link spoils it):
-// EOWRECOMP_NO_USER_INPUT=1, on by default whenever EOWRECOMP_INPUT / EOWRECOMP_DOORJUMP_TEST / EOWRECOMP_PLACE is set
-// (or EOWRECOMP_HOST_INPUT / EOWRECOMP_BIND_TEST; EOWRECOMP_NO_USER_INPUT=0 lets it through again).
+// ITPRECOMP_NO_USER_INPUT=1, on by default whenever ITPRECOMP_INPUT / ITPRECOMP_DOORJUMP_TEST / ITPRECOMP_PLACE is set
+// (or ITPRECOMP_HOST_INPUT / ITPRECOMP_BIND_TEST; ITPRECOMP_NO_USER_INPUT=0 lets it through again).
 bool input_user_blocked(const SDL_Event *e) {
     static int on = -1;
     if (on < 0) {
-        const char *v = getenv("EOWRECOMP_NO_USER_INPUT");
-        on = v ? atoi(v) != 0 : (getenv("EOWRECOMP_INPUT") || getenv("EOWRECOMP_DOORJUMP_TEST") || getenv("EOWRECOMP_PLACE") ||
-                                 getenv("EOWRECOMP_HOST_INPUT") || getenv("EOWRECOMP_BIND_TEST"));
+        const char *v = getenv("ITPRECOMP_NO_USER_INPUT");
+        on = v ? atoi(v) != 0 : (getenv("ITPRECOMP_INPUT") || getenv("ITPRECOMP_DOORJUMP_TEST") || getenv("ITPRECOMP_PLACE") ||
+                                 getenv("ITPRECOMP_HOST_INPUT") || getenv("ITPRECOMP_BIND_TEST"));
         if (on) LOG("[input] scripted run: keyboard, mouse and controllers ignored\n");
     }
     if (!on) return false;
-    if (test_event(e)) return false;  // (EOWRECOMP_HOST_INPUT type: / sdlkey: / sdlpad: - the test's own presses)
+    if (test_event(e)) return false;  // (ITPRECOMP_HOST_INPUT type: / sdlkey: / sdlpad: - the test's own presses)
     switch (e->type) {
     case SDL_EVENT_KEY_DOWN: case SDL_EVENT_KEY_UP: case SDL_EVENT_TEXT_INPUT: case SDL_EVENT_TEXT_EDITING:
     case SDL_EVENT_MOUSE_MOTION: case SDL_EVENT_MOUSE_BUTTON_DOWN: case SDL_EVENT_MOUSE_BUTTON_UP:
@@ -116,7 +116,7 @@ bool input_user_blocked(const SDL_Event *e) {
 }
 
 // Controller family for the button prompts (runtime/nvn/texpatch.c): 0 Nintendo / other / none, 1 Xbox, 2 PlayStation.
-// EOWRECOMP_PAD_TYPE=xbox|playstation|nintendo pretends one is attached (tests).
+// ITPRECOMP_PAD_TYPE=xbox|playstation|nintendo pretends one is attached (tests).
 static _Atomic int pad_family;
 static void note_family(void) {
     int f = 0;
@@ -131,7 +131,7 @@ static void note_family(void) {
 int input_pad_family(void) {
     static int env = -2;
     if (env == -2) {
-        const char *e = getenv("EOWRECOMP_PAD_TYPE");
+        const char *e = getenv("ITPRECOMP_PAD_TYPE");
         env = !e ? -1 : !strcmp(e, "xbox") ? 1 : !strcmp(e, "playstation") || !strcmp(e, "ps") ? 2 : 0;
     }
     return env >= 0 ? env : pad_family;
@@ -165,22 +165,22 @@ void input_handle_event(const SDL_Event *e) {
     }
 }
 
-// Scripted input for testing: EOWRECOMP_INPUT="frame:BUTTON:frames,..." (BUTTON = A,B,X,Y,L,R,ZL,ZR,PLUS,
+// Scripted input for testing: ITPRECOMP_INPUT="frame:BUTTON:frames,..." (BUTTON = A,B,X,Y,L,R,ZL,ZR,PLUS,
 // MINUS,LEFT,UP,RIGHT,DOWN, or STICK_UP/DOWN/LEFT/RIGHT, RSTICK_UP/DOWN/LEFT/RIGHT, STICK_<degrees>: full tilt at
 // that angle, 0 = right, 90 = up).
 static _Atomic uint64_t script_buttons;
 static _Atomic int32_t script_lx, script_ly, script_rx, script_ry;
 
 // Tests of the bindings, through them like a real player:
-// EOWRECOMP_HOST_INPUT="frame:key:<SDL key name>:frames,frame:pad:<button>:frames,..." holds a host key / controller
-//   button (names as in eowrecomp.ini's bind_* lines: "Z", "Keypad 0", "south", "ltrigger"...);
+// ITPRECOMP_HOST_INPUT="frame:key:<SDL key name>:frames,frame:pad:<button>:frames,..." holds a host key / controller
+//   button (names as in itprecomp.ini's bind_* lines: "Z", "Keypad 0", "south", "ltrigger"...);
 //   "frame:lstick:<x>/<y>:frames" holds the controller's left stick there (raw SDL units, y up: a drifting stick).
 // "frame:type:<text>" types <text> as real key events (down, text, up per character), through the overlay menu / name
 //   entry first like a player's typing; "{Escape}" (any SDL key name) presses that key. No ',' or ':' in <text>.
 // "frame:sdlpad:<button>:frames" / "frame:sdlkey:<key>:frames" hold a controller button / key as real events (down
 //   at frame, up `frames` later): they reach menus and the on-screen keyboard first, as a player's would.
 // "frame:shot:<name>" saves the window (game + menus) to build/<name>.png.
-// EOWRECOMP_BIND_TEST="frame:pad|key:<input>:<host>,..." starts a rebind capture of <input> (bind_* name: a, zl,
+// ITPRECOMP_BIND_TEST="frame:pad|key:<input>:<host>,..." starts a rebind capture of <input> (bind_* name: a, zl,
 //   ls_up...) at that frame (the Controls tab shows it waiting) and presses <host> 90 frames later ("esc" cancels,
 //   "wait" lets it time out); "frame:reset:pad|key" resets to the defaults.
 static void push_key(SDL_Scancode sc, SDL_Keymod mod, bool down) {
@@ -240,7 +240,7 @@ static void test_push(uint64_t frame, unsigned long start, unsigned long len, co
 static void host_test_frame(uint64_t frame) {
     static const char *hspec, *bspec;
     static int init;
-    if (!init) { init = 1; hspec = getenv("EOWRECOMP_HOST_INPUT"); bspec = getenv("EOWRECOMP_BIND_TEST"); host_test = hspec; }
+    if (!init) { init = 1; hspec = getenv("ITPRECOMP_HOST_INPUT"); bspec = getenv("ITPRECOMP_BIND_TEST"); host_test = hspec; }
     char buf[2048];
     if (hspec) {
         uint8_t keys[SDL_SCANCODE_COUNT] = {0};
@@ -311,7 +311,7 @@ void input_frame(uint64_t frame) {
     extern void watch_arm(void);
     watch_arm();
     host_test_frame(frame);
-    const char *spec = getenv("EOWRECOMP_INPUT");
+    const char *spec = getenv("ITPRECOMP_INPUT");
     if (!spec) return;
     static const char *const names[] = {"A", "B", "X", "Y", "LSTICK", "RSTICK", "L", "R", "ZL", "ZR", "PLUS",
                                         "MINUS", "LEFT", "UP", "RIGHT", "DOWN"};
@@ -364,9 +364,9 @@ static void fill_state(Cpu *c) {
     if (id != 0) return;  // docked: only player 1 (FullKey); Handheld stays disconnected
     extern uint64_t g_watch_lo, g_watch_hi;
     if (id == 0 && !g_pad_obj) g_pad_obj = c->x[1] - 8;
-    if (id == 0 && !g_watch_lo && getenv("EOWRECOMP_WATCH_PAD")) {
+    if (id == 0 && !g_watch_lo && getenv("ITPRECOMP_WATCH_PAD")) {
         unsigned lo = 0x98 + 0x10, hi = 0x98 + 0x48;  // offsets from the controller manager
-        sscanf(getenv("EOWRECOMP_WATCH_PAD"), "%x,%x", &lo, &hi);
+        sscanf(getenv("ITPRECOMP_WATCH_PAD"), "%x,%x", &lo, &hi);
         g_watch_lo = c->x[1] - 8 - 0x98 + lo;
         g_watch_hi = c->x[1] - 8 - 0x98 + hi;
         LOG("[input] watching controller object %llx\n", c->x[1] - 8);
@@ -403,7 +403,7 @@ static void fill_state(Cpu *c) {
     if (ry < -16000) b |= 1ull << 23;
     *(uint64_t *)(s + 8) = b;
     static uint64_t last_b;
-    if (b != last_b && getenv("EOWRECOMP_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);
+    if (b != last_b && getenv("ITPRECOMP_INPUT")) LOG("[input] id %#x buttons %#llx (sampling %lld, lr %llx)\n", id, (unsigned long long)b, (long long)sampling, c->x[30]);
     last_b = b;
     *(int32_t *)(s + 16) = lx;
     *(int32_t *)(s + 20) = ly;

@@ -10,7 +10,7 @@ GAME_MODULES(DECLARE)
 #define ENTRY(name, base) {#name, name##_fn_addrs, name##_fn_ptrs, &name##_fn_count},
 static const GameLibModule modules[] = {GAME_MODULES(ENTRY)};
 
-GAMELIB_EXPORT const GameLibTables *eowgame_tables(void) {
+GAMELIB_EXPORT const GameLibTables *itpgame_tables(void) {
     static const GameLibTables t = {GAMELIB_ABI, GAMELIB_ID, GAME_NMODULES, modules};
     return &t;
 }

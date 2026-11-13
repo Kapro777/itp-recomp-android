@@ -42,7 +42,7 @@ static bool exists(const char *p) {
 // into the APK itself, opened by its bare name (it lives inside the APK: no file to look at, its own id decides).
 static int candidates(const char *game_dir, char out[3][1100]) {
     int n = 0;
-    const char *env = getenv("EOWRECOMP_GAME_LIB");
+    const char *env = getenv("ITPRECOMP_GAME_LIB");
     if (env && *env) snprintf(out[n++], 1100, "%s", env);
 #ifdef __ANDROID__
     (void)game_dir;
@@ -101,10 +101,10 @@ bool gamelib_load(const char *game_dir, char *why, size_t why_size) {
         snprintf(g_error, sizeof g_error, "the game code hasn't been built: set up the game files on the start screen");
         char c[3][1100];
         int n = candidates(game_dir, c);
-        const char *env = getenv("EOWRECOMP_GAME_LIB");
+        const char *env = getenv("ITPRECOMP_GAME_LIB");
         for (int i = 0; i < n && !g_tables; i++) {
             if (!in_apk(c[i]) && !exists(c[i])) continue;
-            // EOWRECOMP_GAME_LIB / the APK's own: loaded as given, the library's own id decides
+            // ITPRECOMP_GAME_LIB / the APK's own: loaded as given, the library's own id decides
             bool given = (i == 0 && env && *env) || in_apk(c[i]);
             if (!given && !id_matches(c[i])) {
                 snprintf(g_error, sizeof g_error, "%s was built for another version", c[i]);

@@ -1,4 +1,4 @@
-package com.eowrecomp.android;
+package com.itprecomp.android;
 
 import android.content.ContentResolver;
 import android.content.Intent;
@@ -27,8 +27,8 @@ import java.util.Locale;
 // Android: choosing the folder with the player's own game package and keys (the system's folder picker hands out a
 // tree of documents, not a path). The package itself is never copied: the runtime reads it through a file descriptor
 // (runtime/nxpkg.c, openDocument). After LASRecomp-Android-Plus's LasActivity (MIT).
-public class EowActivity extends SDLActivity {
-    private static final String TAG = "EoWRecomp";
+public class ItpActivity extends SDLActivity {
+    private static final String TAG = "ITPRecomp";
     private static final int PICK_FOLDER = 4100;
     private static Uri sTree;  // the folder picked last (read permission kept across restarts)
 
@@ -85,7 +85,7 @@ public class EowActivity extends SDLActivity {
 
     // Opens the system's folder picker; the choice comes back through nativeFolderPicked.
     public static void pickGameFolder() {
-        final EowActivity a = (EowActivity) mSingleton;
+        final ItpActivity a = (ItpActivity) mSingleton;
         if (a == null) return;
         a.runOnUiThread(() -> {
             Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
@@ -121,7 +121,7 @@ public class EowActivity extends SDLActivity {
     }
 
     private static String describe(Uri tree) {
-        String id = DocumentsContract.getTreeDocumentId(tree);  // e.g. "primary:Games/EoW"
+        String id = DocumentsContract.getTreeDocumentId(tree);  // e.g. "primary:Games/ITP"
         int colon = id.indexOf(':');
         return colon >= 0 ? id.substring(colon + 1) : id;
     }
@@ -130,7 +130,7 @@ public class EowActivity extends SDLActivity {
     // a few levels below it. prod.keys (or keys.txt) and title.keys are copied into keysDir. Returns "uri:<the
     // package's document URI>", or "nofolder", "notfound", "nokeys", "error:<details>".
     public static String findGamePackage(String keysDir) {
-        EowActivity a = (EowActivity) mSingleton;
+        ItpActivity a = (ItpActivity) mSingleton;
         if (a == null || sTree == null) return "nofolder";
         ContentResolver cr = a.getContentResolver();
         try {
@@ -151,7 +151,7 @@ public class EowActivity extends SDLActivity {
 
     // A document opened for reading: its file descriptor, handed over to native code (which closes it), or -1
     public static int openDocument(String uri) {
-        EowActivity a = (EowActivity) mSingleton;
+        ItpActivity a = (ItpActivity) mSingleton;
         if (a == null) return -1;
         try {
             ParcelFileDescriptor pfd = a.getContentResolver().openFileDescriptor(Uri.parse(uri), "r");
@@ -212,7 +212,7 @@ public class EowActivity extends SDLActivity {
     // the compiler needs; tools/android/ondevice/make_assets.sh) unpacked into files/ondevice, once per app version.
     // Returns that folder, or null (an APK built without it, or the unpacking failed). Blocking.
     public static synchronized String buildTools() {
-        EowActivity a = (EowActivity) mSingleton;
+        ItpActivity a = (ItpActivity) mSingleton;
         if (a == null) return null;
         File dir = new File(a.getFilesDir(), "ondevice");
         File stamp = new File(dir, ".unpacked");
@@ -262,7 +262,7 @@ public class EowActivity extends SDLActivity {
 
     // The build's foreground service (BuildService): on while it runs, off at its end
     public static void buildService(boolean on, String title) {
-        final EowActivity a = (EowActivity) mSingleton;
+        final ItpActivity a = (ItpActivity) mSingleton;
         if (a == null) return;
         if (!on) { BuildService.stop(a); return; }
         a.runOnUiThread(() -> {

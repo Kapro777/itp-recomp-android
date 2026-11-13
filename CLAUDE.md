@@ -1,4 +1,4 @@
-# EoWRecomp — regras permanentes
+# ITPRecomp — regras permanentes
 
 Recompilação estática de *The Legend of Zelda: Echoes of Wisdom* (Switch, 2024) para PC. Derivado do
 LASRecomp (MIT, https://github.com/peiikai/LASRecomp, commit base `d23597d`). Não é emulador: o ARM64 do jogo
@@ -29,7 +29,7 @@ estado atual e próximo passo: `docs/STATUS.md` (leia antes de começar).
 - Para cada falha, achar a causa (Capstone, logs, Switchbrew, envytools) em vez de contornar. Recurso NVN ou
   instrução Maxwell faltando: implementar corretamente e adicionar teste em `tools/` (`test_translate`,
   `test_shaders`, `test_simd`, `test_lift`).
-- Variáveis de ambiente de depuração usam o prefixo `EOWRECOMP_`.
+- Variáveis de ambiente de depuração usam o prefixo `ITPRECOMP_`.
 
 ## Verificação
 - Uma correção só está verificada depois de vista funcionando (screenshot, log ou teste) — nunca declarar

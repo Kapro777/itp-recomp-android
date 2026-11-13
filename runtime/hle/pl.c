@@ -1,5 +1,5 @@
 // nn::pl shared system fonts. The Switch's system fonts are not part of the game; in order of preference:
-//  1. EOWRECOMP_FONT=<file> (.ttf / .otf / .ttc face 0 / .bfttf)
+//  1. ITPRECOMP_FONT=<file> (.ttf / .otf / .ttc face 0 / .bfttf)
 //  2. a dump from the user's own console in fonts/: nintendo_udsg-r_std_003.bfttf (Standard, Morisawa UD Shin Go)
 //     and nintendo_ext_003.bfttf (NintendoExt button glyphs); plain .ttf versions of those names also work
 //  3. a Japanese gothic like UD Shin Go (much closer to the game's look than Arial): Hiragino Sans W4 on macOS,
@@ -110,7 +110,7 @@ RT_ON_RESET(pl_reset) { g_fonts_loaded = 0; memset(fonts, 0, sizeof fonts); }  /
 static void load_fonts(void) {
     if (g_fonts_loaded) return;
     g_fonts_loaded = 1;
-    const char *env = getenv("EOWRECOMP_FONT");
+    const char *env = getenv("ITPRECOMP_FONT");
     // (the copy the app ships: third_party/fonts/DejaVu - Android has no TrueType system font to rely on)
     static char shipped[1100];
     if (!rt_resource("DejaVuSans.ttf", "third_party/fonts/DejaVu/DejaVuSans.ttf", shipped, sizeof shipped)) shipped[0] = 0;

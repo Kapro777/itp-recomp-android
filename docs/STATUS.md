@@ -34,7 +34,7 @@ compressão do RomFS ficam justamente no fim do NCA: nada do jogo pôde ser extr
 em segundo plano retoma sozinho quando um NSP íntegro aparecer na pasta. **O usuário precisa copiar o NSP de novo.**
 
 ### Feito e verificado (sem os arquivos do jogo)
-- **macOS = Vulkan via MoltenVK** (padrão; `MACOS_BACKEND=metal` mantém o renderer do LAS, sem as correções do EoW).
+- **macOS = Vulkan via MoltenVK** (padrão; `MACOS_BACKEND=metal` mantém o renderer do LAS, sem as correções do ITP).
   Portabilidade (`VK_KHR_portability_enumeration`/`_subset`). Tela inicial renderizada no M1 (MoltenVK 1.4.2).
   `tools/macos/dev_deps.sh`, `docs/BUILD-macos.md`.
 - **Leitura do pacote no runtime** (`runtime/nxpkg.c`): NSP/XCI/NCA com as chaves do usuário, AES (ARMv8 AES no CTR),
@@ -46,14 +46,14 @@ em segundo plano retoma sozinho quando um NSP íntegro aparecer na pasta. **O us
   `gen.py --shift`), setup pelo seletor de pastas do sistema lendo o pacote por *file descriptor* (sem copiar o
   jogo), controles de toque (`runtime/ui/touch.mm`), ciclo de vida (superfície recriada ao voltar do segundo plano),
   swapchain pré-rotacionado, afinidade de núcleos. `tools/android/build_game.sh` gera o APK pessoal com o código do
-  jogo. **Verificado no emulador Android 15 arm64** (AVD próprio `eow_test`): tela inicial em paisagem, pré-rotação
+  jogo. **Verificado no emulador Android 15 arm64** (AVD próprio `itp_test`): tela inicial em paisagem, pré-rotação
   90°, seletor → JNI → leitura do pacote (pacote de teste truncado: mensagem certa), fundo/frente.
 - **Código do jogo**: `Cpu *__restrict` nas funções geradas e `FN_ENTER` compilado fora (`FNPROF=1` o traz de volta):
-  ~10% menos instruções no LAS-Android. **Ainda não medido no EoW.**
+  ~10% menos instruções no LAS-Android. **Ainda não medido no ITP.**
 - **Tradutor Maxwell**: RED S32 min/max e INC/DEC (laço CAS no GLSL); auxiliares do GLSL renomeados (`mw_*`) — no
   MoltenVK `popcount`/`clz`/`fmin` colidiam com built-ins do Metal (1015 de 3200 shaders do fuzz falhavam; agora 63
   de 5882, todos artefatos do método: textura 1D, atributo 31). `tools/test_moltenvk.sh`.
-- **Release macOS**: `make app` → `build/EoWRecomp.app` (FFmpeg LGPL de `tools/build_deps_macos.sh`, MoltenVK + loader
+- **Release macOS**: `make app` → `build/ITPRecomp.app` (FFmpeg LGPL de `tools/build_deps_macos.sh`, MoltenVK + loader
   embutidos e forçados, gerador + zig para compilar o código do jogo na máquina do usuário). Tela inicial ok.
 - gfast (cópias de buffers antes de compute) só em GPU dedicada por padrão (memória unificada: só custo). Não medido.
 - **Build do código do jogo no celular** (`tools/android/ondevice/`, `-PonDeviceBuild=true`): CPython 3.14 Android +
@@ -70,7 +70,7 @@ em segundo plano retoma sozinho quando um NSP íntegro aparecer na pasta. **O us
 - **Release alpha_1** (2026-10-21, pré-release no GitHub, pedida pelo usuário mesmo sem o jogo rodado no Mac/Android):
   `.app` para **macOS 15+** — o loader do Vulkan, o shaderc e o Python do gerador (python-build-standalone) agora vêm
   de `build_deps_macos.sh` (os do Homebrew exigiam macOS 27); `bundle_macos.sh` confere todos os Mach-O. APK assinado
-  com chave de release própria (fora do repo: `android/keystore.properties` → `~/.eowrecomp-signing/`, **guardar**:
+  com chave de release própria (fora do repo: `android/keystore.properties` → `~/.itprecomp-signing/`, **guardar**:
   sem ela, as próximas versões não instalam por cima) e com o build no celular; `check_public_apk.sh` ok; tela inicial
   vista no M1 (Vulkan/MoltenVK) e no emulador Android 15. A tela inicial agora consulta as releases do repositório
   (`alpha_<n>` < `beta_<n>` < `v1.x`).
@@ -86,9 +86,9 @@ em segundo plano retoma sozinho quando um NSP íntegro aparecer na pasta. **O us
 
 ## Marco atual (sessão 2): M4 concluído, M5 parcial (Linux / Vulkan)
 
-Comprovado por screenshot (`EOWRECOMP_SHOT_AT`, capturas em `docs/screenshots/`): o jogo inicializa, toca a abertura
+Comprovado por screenshot (`ITPRECOMP_SHOT_AT`, capturas em `docs/screenshots/`): o jogo inicializa, toca a abertura
 (masmorra do prólogo, Link e os moblins), entra na **primeira cena controlável** (HUD com corações e itens) e
-**responde a input** (input roteirizado `EOWRECOMP_INPUT`: Link anda pelo corredor, entra na sala; prompts
+**responde a input** (input roteirizado `ITPRECOMP_INPUT`: Link anda pelo corredor, entra na sala; prompts
 "Swing sword", "Place / Toss" aparecem). Execução de 330 s / 2.819 frames sem travar. Backend testado: **Vulkan no
 Linux** (Intel Iris Xe, Mesa ANV). Metal não foi tocado nem testado.
 
@@ -110,21 +110,21 @@ Linux** (Intel Iris Xe, Mesa ANV). Metal não foi tocado nem testado.
 ### Problemas abertos (por prioridade)
 1. **Desempenho de GPU**: ~9–12 fps na abertura numa Iris Xe. O material mais caro (fs `72ee66f300`, laço de
    luzes) ainda domina o passe principal; medir de novo sem outra carga na máquina (as últimas medidas tiveram a
-   compilação do Windows em paralelo). Ferramentas: `EOWRECOMP_VK_PROF=1`, `EOWRECOMP_GPUPROF_AT=<frame>`,
-   `EOWRECOMP_SKIP_FSHASH=<hash>`, `EOWRECOMP_SHADER_GUARD=<n>`, `EOWRECOMP_SAVE_MSL=1` (GLSL em `build/glsl/`).
-2. **Artefato**: faixa escura vertical do topo da tela até o Link na abertura. Próximo passo: `EOWRECOMP_DEBUG_FRAME`
+   compilação do Windows em paralelo). Ferramentas: `ITPRECOMP_VK_PROF=1`, `ITPRECOMP_GPUPROF_AT=<frame>`,
+   `ITPRECOMP_SKIP_FSHASH=<hash>`, `ITPRECOMP_SHADER_GUARD=<n>`, `ITPRECOMP_SAVE_MSL=1` (GLSL em `build/glsl/`).
+2. **Artefato**: faixa escura vertical do topo da tela até o Link na abertura. Próximo passo: `ITPRECOMP_DEBUG_FRAME`
    (imagens por passe) para achar o draw.
 3. Dois compute shaders sem tradução (RED com min/max assinado; `SUST` `eb20…`): 128 dispatches pulados.
 4. Áudio não verificado a ouvido; save não testado (o diretório monta).
-5. **Windows**: o `.exe` cruzado linka (7 exports para a DLL do jogo); a compilação da `eowgame.dll` foi
+5. **Windows**: o `.exe` cruzado linka (7 exports para a DLL do jogo); a compilação da `itpgame.dll` foi
    interrompida a pedido do usuário em 44%. Rodar `tools/windows/build.sh all` de novo (só recompila o que falta) e
    testar no Windows.
 
 ### Como testar (Linux)
 - `tools/run.sh` (SECS=60; janela oculta; `SHOW=1` mostra) — log em `build/run.log`, pilha do jogo resolvida
   (`tools/symgame.py`).
-- Screenshots: `EOWRECOMP_SHOT_AT=300,600,900` → `build/frames/`. Input roteirizado:
-  `EOWRECOMP_INPUT="1550:STICK_UP:150,1820:A:10"` (frame:botão:duração).
+- Screenshots: `ITPRECOMP_SHOT_AT=300,600,900` → `build/frames/`. Input roteirizado:
+  `ITPRECOMP_INPUT="1550:STICK_UP:150,1820:A:10"` (frame:botão:duração).
 - Travamentos: rodar dentro do `gdb` e mandar `SIGINT` (o `ptrace_scope` impede anexar depois).
 
 ### Como compilar (Linux, sem sudo)
@@ -136,4 +136,4 @@ Linux** (Intel Iris Xe, Mesa ANV). Metal não foi tocado nem testado.
 
 ### Pendências conhecidas
 - `docs/linux.md` / `docs/BUILD-windows.md` ainda são do LAS.
-- Widescreen, ícones de botão, menu sem abas específicas do EoW: M7.
+- Widescreen, ícones de botão, menu sem abas específicas do ITP: M7.

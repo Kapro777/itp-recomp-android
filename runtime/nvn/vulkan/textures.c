@@ -17,11 +17,11 @@ typedef struct { VkFormat vf; uint8_t expand_rgb, alpha_one; } VkFmt;
 
 // DEPTH24_STENCIL8 as itself where the GPU has it for everything the game does with depth (NVIDIA, Intel): half the
 // bytes of D32_SFLOAT_S8_UINT (4 instead of 8 per pixel) for every depth test, clear and copy - the game copies its
-// full-size depth twice a frame. AMD has no D24S8 attachments: D32S8 there (and on Metal). EOWRECOMP_VK_D24=0: D32S8.
+// full-size depth twice a frame. AMD has no D24S8 attachments: D32S8 there (and on Metal). ITPRECOMP_VK_D24=0: D32S8.
 static VkFormat depth24_stencil8(void) {
     static VkFormat f;
     if (!f) {
-        const char *e = getenv("EOWRECOMP_VK_D24");
+        const char *e = getenv("ITPRECOMP_VK_D24");
         VkFormatProperties p;
         vkGetPhysicalDeviceFormatProperties(g_vk.phys, VK_FORMAT_D24_UNORM_S8_UINT, &p);
         VkFormatFeatureFlags want = VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT |
@@ -98,8 +98,8 @@ static VkFmt fmt_of(uint32_t f) {
     case 0x49: return (VkFmt){VK_FORMAT_BC4_UNORM_BLOCK};
     case 0x4A: return (VkFmt){VK_FORMAT_BC4_SNORM_BLOCK};
     case 0x4B: return (VkFmt){VK_FORMAT_BC5_UNORM_BLOCK};
-    // 0x4C = signed RGTC2; EOWRECOMP_BC5_UNORM=1 decodes it unsigned (see metal.m / notes/PLAN.md)
-    case 0x4C: return (VkFmt){getenv("EOWRECOMP_BC5_UNORM") ? VK_FORMAT_BC5_UNORM_BLOCK : VK_FORMAT_BC5_SNORM_BLOCK};
+    // 0x4C = signed RGTC2; ITPRECOMP_BC5_UNORM=1 decodes it unsigned (see metal.m / notes/PLAN.md)
+    case 0x4C: return (VkFmt){getenv("ITPRECOMP_BC5_UNORM") ? VK_FORMAT_BC5_UNORM_BLOCK : VK_FORMAT_BC5_SNORM_BLOCK};
     case 0x4D: return (VkFmt){VK_FORMAT_BC7_UNORM_BLOCK};
     case 0x4E: return (VkFmt){VK_FORMAT_BC7_SRGB_BLOCK};
     case 0x4F: return (VkFmt){VK_FORMAT_BC6H_SFLOAT_BLOCK};
@@ -171,7 +171,7 @@ void renderer_set_scale(float sx, float sy) { g_rs_x = sx; g_rs_y = sy; }
 uint64_t renderer_present_count(void);
 
 static bool tex_scalable(const NvnTexture *t) {
-    if (getenv("EOWRECOMP_NO_SCALE")) return false;
+    if (getenv("ITPRECOMP_NO_SCALE")) return false;
     if (t->target != 1 || t->samples > 1 || !(t->flags & 8) || t->width < 32 || t->height < 16) return false;
     float a = (float)t->width / (float)t->height;
     return a > 1.74f && a < 1.81f;
@@ -192,7 +192,7 @@ void vk_level_change_check(void) {}
 
 bool renderer_texture_frame_fresh(NvnTexture *t) {
     static int on = -1;
-    if (on < 0) on = getenv("EOWRECOMP_NO_FRAME_CLEAR") == NULL;
+    if (on < 0) on = getenv("ITPRECOMP_NO_FRAME_CLEAR") == NULL;
     TexBackend *b = t ? (TexBackend *)t->backend : NULL;
     uint64_t total_frames = renderer_present_count();
     if (!on || !b || !b->scalable || b->frame_cleared == total_frames + 1) return false;
@@ -203,7 +203,7 @@ bool renderer_texture_frame_fresh(NvnTexture *t) {
 bool renderer_texture_level_fresh(NvnTexture *t) {
     TexBackend *b = t ? (TexBackend *)t->backend : NULL;
     static int keep = -1;
-    if (keep < 0) keep = getenv("EOWRECOMP_KEEP_TARGETS") != NULL;
+    if (keep < 0) keep = getenv("ITPRECOMP_KEEP_TARGETS") != NULL;
     if (!b || keep || b->level_gen == g_level_gen) return false;
     if (!b->scalable) { b->level_gen = g_level_gen; return false; }
     bool fresh = b->level_gen != 0;
@@ -359,7 +359,7 @@ static void defer(Dead d) {
 void vk_defer_image(VkImage img, VmaAllocation mem) { defer((Dead){.img = img, .mem = mem}); }
 void vk_defer_view(VkImageView v) { defer((Dead){.view = v}); }
 
-void vk_dl_note_upload(void *img, uint32_t w, uint32_t h, uint32_t lv);  // (exec.c: EOWRECOMP_VK_DEVLOST_TRACE)
+void vk_dl_note_upload(void *img, uint32_t w, uint32_t h, uint32_t lv);  // (exec.c: ITPRECOMP_VK_DEVLOST_TRACE)
 
 static uint32_t level_w(const TexBackend *b, uint32_t lv) { uint32_t v = b->width >> lv; return v ? v : 1; }
 static uint32_t level_h(const TexBackend *b, uint32_t lv) { uint32_t v = b->height >> lv; return v ? v : 1; }
@@ -492,7 +492,7 @@ static void upload_texture(NvnTexture *t, TexBackend *b) {
     if (full_hash_budget_frame != frame) { full_hash_budget_frame = frame; full_hash_budget = 4 << 20; }
     const uint8_t *mem = (const uint8_t *)(uintptr_t)t->addr;
     static int always_full = -1;
-    if (always_full < 0) always_full = getenv("EOWRECOMP_TEX_FULLHASH") ? 1 : 0;
+    if (always_full < 0) always_full = getenv("ITPRECOMP_TEX_FULLHASH") ? 1 : 0;
     bool full = b->dynamic || !b->uploaded || always_full;
     bool periodic = frame - b->full_frame >= 120 && full_hash_budget >= total;  // (safety net: a full hash now and then)
     if (!full && periodic) { full = true; full_hash_budget -= total; }
@@ -500,9 +500,9 @@ static void upload_texture(NvnTexture *t, TexBackend *b) {
     bool restyle = b->tp > 0 && b->uploaded && b->tp_gen != texpatch_generation();
     // The OS's page write tracking (exec.c vk_pages_changed, shared with the vertex cache): texture memory the CPU
     // hasn't written since the last check is not hashed at all (dynamic textures were fully hashed every frame,
-    // ~2.4 MB a frame in the overworld). The periodic full hash stays as a safety net. EOWRECOMP_VK_TEX_WATCH=0: off.
+    // ~2.4 MB a frame in the overworld). The periodic full hash stays as a safety net. ITPRECOMP_VK_TEX_WATCH=0: off.
     static int watch = -1;
-    if (watch < 0) { const char *e = getenv("EOWRECOMP_VK_TEX_WATCH"); watch = !e || atoi(e) != 0; }
+    if (watch < 0) { const char *e = getenv("ITPRECOMP_VK_TEX_WATCH"); watch = !e || atoi(e) != 0; }
     if (watch && !always_full) {
         extern int vk_pages_changed(uint64_t addr, uint64_t size, uint32_t since, uint32_t *now);
         uint32_t now = 0;
@@ -810,14 +810,14 @@ VkSampler vk_sampler(NvnSamplerDesc *d) {
     si.mipLodBias = d->lod_bias;
     if (d->max_aniso > 1) { si.anisotropyEnable = VK_TRUE; si.maxAnisotropy = fminf(d->max_aniso, 16); }
     static float lodmin = -1;
-    if (lodmin < 0) lodmin = getenv("EOWRECOMP_LOD_MIN") ? (float)atof(getenv("EOWRECOMP_LOD_MIN")) : 0;
+    if (lodmin < 0) lodmin = getenv("ITPRECOMP_LOD_MIN") ? (float)atof(getenv("ITPRECOMP_LOD_MIN")) : 0;
     if (lodmin > 0 && mf > 1) si.minLod = fmaxf(si.minLod, lodmin);
     static int stest = -1;
-    if (stest < 0) stest = getenv("EOWRECOMP_SAMPLER_TEST") != NULL;
+    if (stest < 0) stest = getenv("ITPRECOMP_SAMPLER_TEST") != NULL;
     if (stest && mf > 1) { si.minLod = 0; si.maxLod = VK_LOD_CLAMP_NONE; si.anisotropyEnable = VK_TRUE; si.maxAnisotropy = 16; }
     if (d->compare_mode) {
         si.compareEnable = VK_TRUE;
-        si.compareOp = getenv("EOWRECOMP_NO_SHADOW") ? VK_COMPARE_OP_ALWAYS : compare_op(d->compare_func);
+        si.compareOp = getenv("ITPRECOMP_NO_SHADOW") ? VK_COMPARE_OP_ALWAYS : compare_op(d->compare_func);
     }
     VkSamplerCustomBorderColorCreateInfoEXT cb = {.sType = VK_STRUCTURE_TYPE_SAMPLER_CUSTOM_BORDER_COLOR_CREATE_INFO_EXT};
     if (border) {

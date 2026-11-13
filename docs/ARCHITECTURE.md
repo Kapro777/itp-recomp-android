@@ -1,4 +1,4 @@
-# Arquitetura do EoWRecomp (herdada do LASRecomp)
+# Arquitetura do ITPRecomp (herdada do LASRecomp)
 
 Base: LASRecomp commit `d23597d` (2026-10-18), estudado arquivo por arquivo. Este documento confirma/corrige a
 descrição inicial do projeto e lista o que é reaproveitado, adaptado ou novo. Números marcados "medido" vêm de
@@ -8,8 +8,8 @@ ferramentas rodadas sobre o dump (comandos na seção final), não de estimativa
 
 ```
 XCI ──hactool──> NCAs ──tools/nca_extract.py──> extracted/exefs (NSOs) + extracted/romfs
-extracted/exefs/<módulo> ──tools/gen.py──> generated/<módulo>/*.c ──clang──> eowgame.{so,dll,dylib}
-runtime (eowrecomp[.exe]) ── carrega NSOs na memória do guest, reloca, dlopen(eowgame) ── nn::init::Start
+extracted/exefs/<módulo> ──tools/gen.py──> generated/<módulo>/*.c ──clang──> itpgame.{so,dll,dylib}
+runtime (itprecomp[.exe]) ── carrega NSOs na memória do guest, reloca, dlopen(itpgame) ── nn::init::Start
 ```
 
 ### Recompilador (Python, `tools/`)
@@ -31,12 +31,12 @@ runtime (eowrecomp[.exe]) ── carrega NSOs na memória do guest, reloca, dlop
   `runtime/simd.h` + `simd_fp.h`, exige AVX2/FMA: `-march=x86-64-v3`). Endereço do guest == endereço do host
   (`LD64(a)` é um ponteiro direto). Não suporta: pares exclusivos (`LDXP/STXP`), LSE (`CAS/SWP/LDADD…`).
 - **`patches.py`** — substituição por instrução (endereço → C), aplicada na geração, sempre conferindo a palavra
-  original (`expect()`). No EoWRecomp está vazio (só o mecanismo); os do LA foram removidos.
+  original (`expect()`). No ITPRecomp está vazio (só o mecanismo); os do LA foram removidos.
 - **`passes.py`**, `simd_c.py`, testes `test_lift.py`, `test_simd.py`, `test_translate.c`, `test_shaders.*`,
   `test_astc.*`, `test_vk_pipelines.*`.
 
 ### Código do jogo como biblioteca separada (não estava na descrição)
-O código gerado compila para `eowgame.so/.dll/.dylib`, carregado em runtime (`gamelib.c`, entrada
+O código gerado compila para `itpgame.so/.dll/.dylib`, carregado em runtime (`gamelib.c`, entrada
 `tools/gamelib_entry.c`, id = hash do gerador + headers + flags). O executável não contém código do jogo; a tela
 inicial pode gerar e compilar a biblioteca na máquina do usuário (`gamebuild.c`, gerador empacotado com PyInstaller,
 `zig cc` como compilador).
@@ -75,10 +75,10 @@ inicial pode gerar e compilar a biblioteca na máquina do usuário (`gamebuild.c
   em disco (`cache/spirv/`). Upscalers (bilinear, FSR1, MetalFX), SMAA.
 - **Host**: SDL3 (janela, input, áudio), FFmpeg (vídeos), Dear ImGui (menu F1 e tela inicial), plataforma
   (`platform/{linux,windows,macos}.c`: reserva de memória, crash handler, backtrace).
-- **Testes roteirizados**: variáveis `EOWRECOMP_*` (input gravado, screenshot no frame N, profilers), `tools/shot.sh`,
+- **Testes roteirizados**: variáveis `ITPRECOMP_*` (input gravado, screenshot no frame N, profilers), `tools/shot.sh`,
   `tools/frames.sh`.
 
-## 2. O que o EoW tem de diferente (medido)
+## 2. O que o ITP tem de diferente (medido)
 
 | | Link's Awakening (LAS) | Echoes of Wisdom (dump) |
 |---|---|---|
@@ -129,8 +129,8 @@ ser chamadas; o M2 mostra). Pares exclusivos/LSE no `sdk`: 187 `ldxp/stxp/ldaxp/
 - `glslc` (`subsdk0`): o jogo importa o compilador GLSL da NVN. Se for chamado em runtime, HLE que compila o GLSL
   direto (shaderc) em vez de recompilar os 6,8 MB do glslc — decidir por medição.
 - Recompilação e despacho de 4 módulos.
-- HLE/patches específicos do EoW (heaps do motor, save, M7: resolução, aspect ratio, 60 fps, ícones de botões).
-- Testes roteirizados próprios (input gravado do EoW, frames de referência).
+- HLE/patches específicos do ITP (heaps do motor, save, M7: resolução, aspect ratio, 60 fps, ícones de botões).
+- Testes roteirizados próprios (input gravado do ITP, frames de referência).
 
 ## 4. Comandos das medições
 

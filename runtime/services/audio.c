@@ -433,7 +433,7 @@ static void effect_update(Effect *fx, const uint8_t *e) {
     if (e[1] || !fx->rv.ready) {
         memcpy(fx->rv.raw, d, sizeof fx->rv.raw);
         memcpy(&fx->rv.p, d, sizeof fx->rv.p);
-        if (getenv("EOWRECOMP_AUDIO_LOG"))
+        if (getenv("ITPRECOMP_AUDIO_LOG"))
             LOG("[audren] reverb init: ch %u rate %d early %d/%d pre %d late %d/%d decay %d hf %d col %d gains %d/%d/%d\n",
                 ch, fx->rv.p.sample_rate, fx->rv.p.early_mode, fx->rv.p.early_gain, fx->rv.p.pre_delay,
                 fx->rv.p.late_mode, fx->rv.p.late_gain, fx->rv.p.decay_time, fx->rv.p.hf_decay_ratio,
@@ -462,9 +462,9 @@ static void apply_effects(Renderer *r, int32_t mix_id, Mix *m) {
             }
             if (!ok) continue;
             static int no_reverb = -1;
-            if (no_reverb < 0) no_reverb = getenv("EOWRECOMP_NO_REVERB") ? 1 : 0;
+            if (no_reverb < 0) no_reverb = getenv("ITPRECOMP_NO_REVERB") ? 1 : 0;
             static int toggle = -1;
-            if (toggle < 0) toggle = getenv("EOWRECOMP_REVERB_TOGGLE") ? atoi(getenv("EOWRECOMP_REVERB_TOGGLE")) : 0;
+            if (toggle < 0) toggle = getenv("ITPRECOMP_REVERB_TOGGLE") ? atoi(getenv("ITPRECOMP_REVERB_TOGGLE")) : 0;
             int off = no_reverb || !g_settings.reverb || (toggle && (r->elapsed_frames / toggle) % 2);
             if (fx->enabled && !off) reverb_process(&fx->rv, in, out, N);
             else
@@ -477,7 +477,7 @@ static int hf_log = -1;
 static double hf[1024];
 
 static void render_frame(Renderer *r, float *stereo) {
-    if (hf_log < 0) hf_log = getenv("EOWRECOMP_AUDIO_HF") ? 1 : 0;
+    if (hf_log < 0) hf_log = getenv("ITPRECOMP_AUDIO_HF") ? 1 : 0;
     uint32_t N = r->sample_count;
     for (uint32_t m = 0; m < r->nmix; m++)
         if (r->mix[m].buf) memset(r->mix[m].buf, 0, sizeof(float) * MIXBUF_MAX * N);
@@ -536,7 +536,7 @@ static void render_frame(Renderer *r, float *stereo) {
             }
             if (!dst) continue;
             static int solo = -2;
-            if (solo == -2) solo = getenv("EOWRECOMP_AUDIO_SOLO") ? atoi(getenv("EOWRECOMP_AUDIO_SOLO")) : -1;
+            if (solo == -2) solo = getenv("ITPRECOMP_AUDIO_SOLO") ? atoi(getenv("ITPRECOMP_AUDIO_SOLO")) : -1;
             if (solo >= 0 && (int)vi != solo) continue;
             for (uint32_t b = 0; b < dst->bufs && b < MIXBUF_MAX; b++) {
                 float g0 = v->prev_volume * cr->prev[b], g1 = v->volume * cr->mix[b];
@@ -606,10 +606,10 @@ static void render_frame(Renderer *r, float *stereo) {
     }
 }
 
-// Output gain: menu volume times EOWRECOMP_AUDIO_GAIN (applied live).
+// Output gain: menu volume times ITPRECOMP_AUDIO_GAIN (applied live).
 static void apply_gain(SDL_AudioStream *st) {
     static double env = -1;
-    if (env < 0) env = getenv("EOWRECOMP_AUDIO_GAIN") ? atof(getenv("EOWRECOMP_AUDIO_GAIN")) : 1.0;
+    if (env < 0) env = getenv("ITPRECOMP_AUDIO_GAIN") ? atof(getenv("ITPRECOMP_AUDIO_GAIN")) : 1.0;
     float g = (float)(env * g_settings.volume);
     if (st && SDL_GetAudioStreamGain(st) != g) SDL_SetAudioStreamGain(st, g);
 }
@@ -708,7 +708,7 @@ static void update_voice(Renderer *r, Voice *v, const uint8_t *p, uint8_t *out) 
         const uint8_t *b = p + 36 + f * 12;
         if (b[0] && !v->bq_on[f]) {
             v->bq_reset[f] = 1;
-            if (getenv("EOWRECOMP_AUDIO_LOG")) {
+            if (getenv("ITPRECOMP_AUDIO_LOG")) {
                 int16_t k[5];
                 memcpy(k, b + 2, 10);
                 LOG("[audren] v%ld biquad%d on: %d %d %d / %d %d\n", (long)(v - r->voice), f, k[0], k[1], k[2], k[3], k[4]);
@@ -747,7 +747,7 @@ static void update_voice(Renderer *r, Voice *v, const uint8_t *p, uint8_t *out) 
             }
             wb->sent = 0;
             static int dumped;
-            if (getenv("EOWRECOMP_AUDIO_DUMPWB") && !dumped && wb->size > 0x100000 && v->fmt == 6 && v->ds_addr) {
+            if (getenv("ITPRECOMP_AUDIO_DUMPWB") && !dumped && wb->size > 0x100000 && v->fmt == 6 && v->ds_addr) {
                 dumped = 1;
                 FILE *f = fopen("build/wb_dump.bin", "wb");
                 if (f) {
@@ -764,7 +764,7 @@ static void update_voice(Renderer *r, Voice *v, const uint8_t *p, uint8_t *out) 
                 }
             }
             static int vlog = -1;
-            if (vlog < 0) vlog = getenv("EOWRECOMP_AUDIO_LOG") ? 1 : 0;
+            if (vlog < 0) vlog = getenv("ITPRECOMP_AUDIO_LOG") ? 1 : 0;
             if (vlog)
                 LOG("[audren] f%llu v%ld wb%d fmt %u rate %u ch %u pitch %.3f vol %.3f mix %d res %u addr %llx size %llx "
                     "[%u,%u) loop %u/%d eos %u ctx %llx ds %llx\n", (unsigned long long)r->elapsed_frames,
@@ -818,7 +818,7 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
     {
         static int dump_n = -1;
         static long count;
-        if (dump_n < 0) dump_n = getenv("EOWRECOMP_AUDIO_DUMP") ? 1 : 0;
+        if (dump_n < 0) dump_n = getenv("ITPRECOMP_AUDIO_DUMP") ? 1 : 0;
         count++;
         if (dump_n && (count == 300 || count == 2000 || count == 6000 || count == 12000)) {
             char path[64];
@@ -878,7 +878,7 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
             LOG("[audren] effect type %u used%s: slot %u mix %d enabled %u\n", e[0], e[0] == 4 ? "" : " (not implemented)", i,
                 *(const int32_t *)(e + 4), e[2]);
         }
-        if (e[0] && getenv("EOWRECOMP_AUDIO_LOG")) {
+        if (e[0] && getenv("ITPRECOMP_AUDIO_LOG")) {
             static uint8_t last[16][0xC0];
             if (i < 16 && memcmp(last[i], e, 0xC0)) {
                 memcpy(last[i], e, 0xC0);
@@ -933,16 +933,16 @@ static void request_update(Renderer *r, IpcReq *req, IpcResp *resp) {
 }
 
 static void renderer_open_output(Renderer *r) {
-    if (getenv("EOWRECOMP_AUDIO_WAV")) {
-        r->wav = fopen(getenv("EOWRECOMP_AUDIO_WAV"), "wb");
+    if (getenv("ITPRECOMP_AUDIO_WAV")) {
+        r->wav = fopen(getenv("ITPRECOMP_AUDIO_WAV"), "wb");
         if (r->wav) wav_header(r->wav, 0);
     }
-    if (getenv("EOWRECOMP_NO_AUDIO") && strcmp(getenv("EOWRECOMP_NO_AUDIO"), "0")) return;
+    if (getenv("ITPRECOMP_NO_AUDIO") && strcmp(getenv("ITPRECOMP_NO_AUDIO"), "0")) return;
     if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) { LOG("[audren] SDL audio init failed: %s\n", SDL_GetError()); return; }
     SDL_AudioSpec spec = {SDL_AUDIO_F32, 2, (int)r->sample_rate};
     r->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
     if (!r->stream) { LOG("[audren] SDL audio open failed: %s\n", SDL_GetError()); return; }
-    if (getenv("EOWRECOMP_AUDIO_GAIN")) SDL_SetAudioStreamGain(r->stream, (float)atof(getenv("EOWRECOMP_AUDIO_GAIN")));
+    if (getenv("ITPRECOMP_AUDIO_GAIN")) SDL_SetAudioStreamGain(r->stream, (float)atof(getenv("ITPRECOMP_AUDIO_GAIN")));
     SDL_ResumeAudioStreamDevice(r->stream);
 }
 
@@ -1151,7 +1151,7 @@ static void *audout_thread(void *arg) {
 
 static void audio_out(Service *s, IpcReq *req, IpcResp *resp) {
     AudioOut *a = s->state;
-    if (getenv("EOWRECOMP_AUDIO_LOG") && req->cmd != 3 && req->cmd != 7) {
+    if (getenv("ITPRECOMP_AUDIO_LOG") && req->cmd != 3 && req->cmd != 7) {
         IpcBuf *ob = out_buf(req, 0);
         LOG("[audout] cmd %u out %llx/%llx\n", req->cmd, ob ? (unsigned long long)ob->addr : 0ull,
             ob ? (unsigned long long)ob->size : 0ull);
@@ -1164,7 +1164,7 @@ static void audio_out(Service *s, IpcReq *req, IpcResp *resp) {
         IpcBuf *b = in_buf(req, 0);
         uint64_t tag = IN(uint64_t, 0);
         uint64_t size = b && b->size >= 0x28 ? ((uint64_t *)(uintptr_t)b->addr)[3] : 0;
-        if (getenv("EOWRECOMP_AUDIO_LOG") && b)
+        if (getenv("ITPRECOMP_AUDIO_LOG") && b)
             LOG("[audout] append tag %llx buf %llx size %llx: %llx %llx %llx %llx %llx\n", (unsigned long long)tag,
                 (unsigned long long)b->addr, (unsigned long long)b->size, ((unsigned long long *)(uintptr_t)b->addr)[0],
                 ((unsigned long long *)(uintptr_t)b->addr)[1], ((unsigned long long *)(uintptr_t)b->addr)[2],
@@ -1190,7 +1190,7 @@ static void audio_out(Service *s, IpcReq *req, IpcResp *resp) {
         if (n > max) n = max;
         if (b && b->size) memset((void *)(uintptr_t)b->addr, 0, b->size);  // SDK reads entry 0 even when n == 0
         for (int i = 0; i < n; i++) ((uint64_t *)(uintptr_t)b->addr)[i] = a->released[i];
-        if (getenv("EOWRECOMP_AUDIO_LOG") && n) LOG("[audout] released %d (first %llx)\n", n, (unsigned long long)a->released[0]);
+        if (getenv("ITPRECOMP_AUDIO_LOG") && n) LOG("[audout] released %d (first %llx)\n", n, (unsigned long long)a->released[0]);
         memmove(a->released, a->released + n, (a->released_n - n) * 8);
         a->released_n -= n;
         pthread_mutex_unlock(&a->lock);
@@ -1226,12 +1226,12 @@ SERVICE("audout:u", audout_u) {
         a->state = 1;
         pthread_mutex_init(&a->lock, NULL);
         a->event = kernel_create_event_pair(&a->ev_w, &a->ev_r);
-        if (getenv("EOWRECOMP_AUDOUT_WAV")) a->wav = fopen(getenv("EOWRECOMP_AUDOUT_WAV"), "wb");
-        if (!(getenv("EOWRECOMP_NO_AUDIO") && strcmp(getenv("EOWRECOMP_NO_AUDIO"), "0")) && SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        if (getenv("ITPRECOMP_AUDOUT_WAV")) a->wav = fopen(getenv("ITPRECOMP_AUDOUT_WAV"), "wb");
+        if (!(getenv("ITPRECOMP_NO_AUDIO") && strcmp(getenv("ITPRECOMP_NO_AUDIO"), "0")) && SDL_InitSubSystem(SDL_INIT_AUDIO)) {
             SDL_AudioSpec spec = {SDL_AUDIO_S16, (int)a->channels, (int)a->rate};
             a->stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
             if (a->stream) {
-                if (getenv("EOWRECOMP_AUDIO_GAIN")) SDL_SetAudioStreamGain(a->stream, (float)atof(getenv("EOWRECOMP_AUDIO_GAIN")));
+                if (getenv("ITPRECOMP_AUDIO_GAIN")) SDL_SetAudioStreamGain(a->stream, (float)atof(getenv("ITPRECOMP_AUDIO_GAIN")));
                 SDL_ResumeAudioStreamDevice(a->stream);
             }
         }

@@ -1,6 +1,6 @@
 # Android
 
-The Android app (`android/`, package `com.eowrecomp.android`) is the same runtime as on the computer - kernel,
+The Android app (`android/`, package `com.itprecomp.android`) is the same runtime as on the computer - kernel,
 services, NVN on Vulkan, the start screen and menus - built with the NDK for arm64 phones (Android 11+, Vulkan 1.3),
 plus touch controls. Its structure follows [LASRecomp-Android-Plus](https://github.com/Nycolazs/LASRecomp-Android-Plus)
 (MIT).
@@ -15,7 +15,7 @@ of [BUILD-macos.md](BUILD-macos.md) (or Linux's) for the recompiler's Python.
 
     tools/android/build_deps.sh                  # FFmpeg, shaderc, Vulkan headers, VMA, volk, SDL3 (once, ~15 min)
     (cd android && ./gradlew assembleDebug)       # the app: libmain.so (the runtime) + SDL3
-    tools/android/build_game.sh extracted --apk   # the game code (libeowgame.so) from your exefs/, and the APK with it
+    tools/android/build_game.sh extracted --apk   # the game code (libitpgame.so) from your exefs/, and the APK with it
 
 `build_game.sh` runs the generator with the Android address shift (the guest layout sits 0x6000000000 lower there:
 `runtime/cpu.h` `GUEST_SHIFT`) and compiles with the NDK at -O2. The result is
@@ -24,15 +24,15 @@ over adb instead.
 
 ## On the phone
 
-1. Copy your `.nsp` (or `.xci`) and your `prod.keys` into one folder, e.g. `Download/EoW`.
+1. Copy your `.nsp` (or `.xci`) and your `prod.keys` into one folder, e.g. `Download/ITP`.
 2. Open the app: **Game files folder** -> pick that folder -> **Set up game files**. The keys are copied into the
    app; the package is **not** copied: the game reads its data straight from it through the folder's permission
    (so keep it there). Only the game's code files (~40 MB) are written out.
 3. Play with the on-screen controls or a Bluetooth / USB controller (the touch controls hide while a controller is
    used and come back with a touch). The menu button at the top centre, or Android's Back button, opens the settings.
 
-The app keeps its files in `Android/data/com.eowrecomp.android/files/` (saves in `save/`, the log in
-`eowrecomp.log`). Test and debug variables go into `env.txt` there, one `EOWRECOMP_...=value` per line.
+The app keeps its files in `Android/data/com.itprecomp.android/files/` (saves in `save/`, the log in
+`itprecomp.log`). Test and debug variables go into `env.txt` there, one `ITPRECOMP_...=value` per line.
 
 ## State
 

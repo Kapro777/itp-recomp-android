@@ -1,7 +1,7 @@
 #!/bin/bash
 # tools/android/ondevice/check_public_apk.sh <apk>: an APK to share carries no code or data made from the game
 # (docs/BUILD-android.md). Fails when it finds:
-#   - libeowgame.so (the game code library) or any other library defining recompiled game functions (f_70xxxxxxxx)
+#   - libitpgame.so (the game code library) or any other library defining recompiled game functions (f_70xxxxxxxx)
 #   - generated C (the generator's chunk files: "#include \"cpu.h\"" + f_70... functions) inside the APK or inside assets/ondevice.zip
 #   - game files (exefs/, romfs/, main.npdm, .nso / .nca / .nsp / .xci)
 # and shows what it carries for building the game code on the phone.
@@ -17,7 +17,7 @@ mkdir -p $W/apk $W/zip
 unzip -q -o "$APK" -d $W/apk
 bad=0
 fail() { echo "FAIL: $*"; bad=1; }
-find $W/apk -name 'libeowgame.so*' | grep -q . && fail "libeowgame.so in the APK"
+find $W/apk -name 'libitpgame.so*' | grep -q . && fail "libitpgame.so in the APK"
 find $W/apk \( -iname '*.nso' -o -iname '*.nca' -o -iname '*.nsp' -o -iname '*.xci' -o -name main.npdm -o -type d -name exefs \
     -o -type d -name romfs \) | grep -q . && fail "game files in the APK"
 for so in $(find $W/apk -name '*.so'); do

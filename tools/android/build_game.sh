@@ -2,7 +2,7 @@
 # tools/android/build_game.sh <game folder> [--apk] [--push]: the game code library for the Android app, from your own
 # game files (v1.0.0; the folder holding exefs/, or exefs/ itself). On this computer: the generator (tools/gen.py,
 # with the Android address shift) turns the ExeFS modules (runtime/modules.h) into C, the NDK compiles that into
-# libeowgame.so (build/android/gamelib/arm64-v8a/), linked against the app's own libmain.so (build the app first:
+# libitpgame.so (build/android/gamelib/arm64-v8a/), linked against the app's own libmain.so (build the app first:
 # cd android && ./gradlew assembleDebug).
 #   --apk   also build a personal APK with it inside (android/app/build/outputs/apk/debug/app-debug.apk)
 #   --push  copy it into the app on the phone connected over adb (debug builds: run-as)
@@ -72,22 +72,22 @@ for o in "$OBJ"/*_*.o; do
 done
 echo "== linking"
 # DT_NEEDED libmain.so: the runtime functions the game code calls are the app's own (it is loaded first)
-"$CC" -shared -fuse-ld=lld -Wl,-z,max-page-size=16384 -Wl,-Bsymbolic -Wl,-soname,libeowgame.so \
-    -o "$OUT/libeowgame.so.tmp" "$OBJ"/*.o -L"$(dirname "$MAINLIB")" -lmain
-mv "$OUT/libeowgame.so.tmp" "$OUT/libeowgame.so"
-echo "$ID" > "$OUT/libeowgame.so.id"
-ls -la "$OUT/libeowgame.so"
+"$CC" -shared -fuse-ld=lld -Wl,-z,max-page-size=16384 -Wl,-Bsymbolic -Wl,-soname,libitpgame.so \
+    -o "$OUT/libitpgame.so.tmp" "$OBJ"/*.o -L"$(dirname "$MAINLIB")" -lmain
+mv "$OUT/libitpgame.so.tmp" "$OUT/libitpgame.so"
+echo "$ID" > "$OUT/libitpgame.so.id"
+ls -la "$OUT/libitpgame.so"
 
 if [ $APK = 1 ]; then
     echo "== personal APK"
-    (cd android && ./gradlew assembleDebug -q -PeowGameLib="$ROOT/build/android/gamelib")
+    (cd android && ./gradlew assembleDebug -q -PitpGameLib="$ROOT/build/android/gamelib")
     ls -la android/app/build/outputs/apk/debug/app-debug.apk
 fi
 if [ $PUSH = 1 ]; then
     echo "== into the app on the phone"
-    PKG=com.eowrecomp.android
-    adb push "$OUT/libeowgame.so" "$OUT/libeowgame.so.id" /data/local/tmp/
-    adb shell "run-as $PKG cp /data/local/tmp/libeowgame.so /data/local/tmp/libeowgame.so.id files/ &&
-               rm /data/local/tmp/libeowgame.so /data/local/tmp/libeowgame.so.id"
-    adb shell "run-as $PKG ls -la files/libeowgame.so files/libeowgame.so.id"
+    PKG=com.itprecomp.android
+    adb push "$OUT/libitpgame.so" "$OUT/libitpgame.so.id" /data/local/tmp/
+    adb shell "run-as $PKG cp /data/local/tmp/libitpgame.so /data/local/tmp/libitpgame.so.id files/ &&
+               rm /data/local/tmp/libitpgame.so /data/local/tmp/libitpgame.so.id"
+    adb shell "run-as $PKG ls -la files/libitpgame.so files/libitpgame.so.id"
 fi

@@ -1,6 +1,6 @@
 # Building on macOS (Apple Silicon)
 
-EoWRecomp runs on macOS through the same Vulkan backend as every other platform, on Apple's Metal via
+ITPRecomp runs on macOS through the same Vulkan backend as every other platform, on Apple's Metal via
 [MoltenVK](https://github.com/KhronosGroup/MoltenVK). Tested on a MacBook Air M1 (8 GB) with macOS 27 and MoltenVK
 1.4.2. (The Metal renderer inherited from LAS Recomp is still in the tree, `make MACOS_BACKEND=metal`, but it has
 none of the Echoes of Wisdom fixes.)
@@ -33,20 +33,20 @@ and `prod.keys` - only the ExeFS is written out, and the data is read straight f
 ## 3. Build
 
     make gen                 # the game code as C (generated/, a few minutes)
-    make -j8                 # build/eowrecomp and build/eowgame.dylib
+    make -j8                 # build/itprecomp and build/itpgame.dylib
 
 The first build of the game code compiles ~300,000 functions and takes a while on 8 cores; later builds only
-recompile what changed. `FNPROF=1` builds the game code with the function profiler's hook (`EOWRECOMP_FNPROF`).
+recompile what changed. `FNPROF=1` builds the game code with the function profiler's hook (`ITPRECOMP_FNPROF`).
 
 ## 4. Run
 
 From the repository (it finds `extracted/` there):
 
-    build/eowrecomp
+    build/itprecomp
 
-Useful environment variables (all `EOWRECOMP_*`): `EOWRECOMP_SHOT_AT=300,600` (screenshots into `build/frames/`),
-`EOWRECOMP_INPUT="1550:STICK_UP:150,1820:A:10"` (scripted input), `EOWRECOMP_NO_LAUNCHER=1` (straight into the game),
-`EOWRECOMP_VK_VALIDATION=1` (Khronos validation layer, `brew install vulkan-validationlayers`).
+Useful environment variables (all `ITPRECOMP_*`): `ITPRECOMP_SHOT_AT=300,600` (screenshots into `build/frames/`),
+`ITPRECOMP_INPUT="1550:STICK_UP:150,1820:A:10"` (scripted input), `ITPRECOMP_NO_LAUNCHER=1` (straight into the game),
+`ITPRECOMP_VK_VALIDATION=1` (Khronos validation layer, `brew install vulkan-validationlayers`).
 
 ## Tests that need no game files
 
@@ -57,7 +57,7 @@ Useful environment variables (all `EOWRECOMP_*`): `EOWRECOMP_SHOT_AT=300,600` (s
 ## The app to share
 
     tools/build_deps_macos.sh   # once (~10 min): SDL3, LGPL-only FFmpeg, the Vulkan loader, shaderc, VMA, Python
-    make app                    # build/EoWRecomp.app
+    make app                    # build/ITPRecomp.app
 
 Homebrew's libraries are built for the macOS they were bottled on, so `build_deps_macos.sh` builds what the app carries
 from pinned, checksum-checked sources for macOS 15 (`MACOS_MIN`), and fetches a standalone Python

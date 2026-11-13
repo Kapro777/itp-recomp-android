@@ -1,7 +1,7 @@
-# EoWRecomp on Linux (x86-64, aarch64)
+# ITPRecomp on Linux (x86-64, aarch64)
 
 > [!NOTE]
-> Herdado do LAS Recomp (só renomeado). Ainda não revisado para o EoWRecomp: ver `docs/STATUS.md`.
+> Herdado do LAS Recomp (só renomeado). Ainda não revisado para o ITPRecomp: ver `docs/STATUS.md`.
 
 Status: branch `linux-beta2`. Builds and runs the game on Vulkan (with your own game files) on x86-64, checked before
 each release by `make smoketest`. aarch64 is **experimental**: cross-compiled, its start screen checked under emulation,
@@ -16,9 +16,9 @@ Needs: a distribution with glibc 2.35 or newer (Ubuntu 22.04, Debian 12, Fedora 
 (Mesa RADV / ANV / NVK / Turnip / Asahi Honeykrisp, or NVIDIA's), and on x86-64 a CPU with AVX2 (2013 or newer).
 The start screen asks for the folder with your own game files and sets them up.
 
-Everything the app writes lives in `~/.local/share/eowrecomp` (`$XDG_DATA_HOME/eowrecomp`): game files (`extracted/`),
-saves, seeds, settings (`eowrecomp.ini`), shader caches, imported fonts. Started without a terminal the log is
-`~/.local/share/eowrecomp/eowrecomp.log` (from a terminal it prints there instead). `EOWRECOMP_DATA_ROOT=<dir>` uses
+Everything the app writes lives in `~/.local/share/itprecomp` (`$XDG_DATA_HOME/itprecomp`): game files (`extracted/`),
+saves, seeds, settings (`itprecomp.ini`), shader caches, imported fonts. Started without a terminal the log is
+`~/.local/share/itprecomp/itprecomp.log` (from a terminal it prints there instead). `ITPRECOMP_DATA_ROOT=<dir>` uses
 another folder.
 
 Controllers work as on the other systems (SDL3's gamepad support, bundled): Xbox, PlayStation (DualShock 4,
@@ -42,10 +42,10 @@ Then from the repo root:
     python3 -m venv tools/venv && tools/venv/bin/pip install lz4 capstone unicorn
     make -j         # the start screen only (no game code yet): set up the game files there, or put extracted/ here
     make gen        # once: recompile the game from your own game files
-    make -j         # -> build/eowrecomp and the game code library build/eowgame.so
+    make -j         # -> build/itprecomp and the game code library build/itpgame.so
 
-Run `./build/eowrecomp` from the repo root: with `extracted/` in the starting folder it uses that folder for
-everything (dev mode) instead of `~/.local/share/eowrecomp`.
+Run `./build/itprecomp` from the repo root: with `extracted/` in the starting folder it uses that folder for
+everything (dev mode) instead of `~/.local/share/itprecomp`.
 
 `ARCH` picks the target, separately from the OS: the generated code differs per arch (aarch64 runs the guest's
 FP/SIMD as inline asm, like Apple Silicon; x86-64 lowers it to C with `-march=x86-64-v3`, like Windows). `make gen`
@@ -61,7 +61,7 @@ The randomizer from a source checkout uses LAS-Randomizer's own venv (Python 3.1
 ## AppImages
 Needs podman, and for aarch64 QEMU user emulation with binfmt (`sudo apt install podman qemu-user qemu-user-binfmt`).
 
-    make appimage                # this machine's arch -> build/dist/EoWRecomp-<version>-linux-<arch>.AppImage
+    make appimage                # this machine's arch -> build/dist/ITPRecomp-<version>-linux-<arch>.AppImage
     make appimage ARCH=aarch64   # cross-compiled from x86-64
     make appimages               # both
 
@@ -79,10 +79,10 @@ three launches of the AppImage itself - the start screen; a session from a test 
 and every dungeon's entrance; and a seed generated from the in-game Randomizer tab, switched to live, the save loaded
 on it, then deleted. Each step is checked in the log and by a screenshot. `build/smoke/report.txt` ends with READY FOR
 RELEASE or NOT READY; `build/smoke/sheet.png` shows every screenshot. It needs `extracted/` in the checkout and a test
-save outside git (`~/.local/share/eowrecomp-smoketest/save`, or `EOWRECOMP_SMOKE_SAVE`): copy `save/` from any build
+save outside git (`~/.local/share/itprecomp-smoketest/save`, or `ITPRECOMP_SMOKE_SAVE`): copy `save/` from any build
 after starting a new game once.
 
-The AppImage holds `eowrecomp`, `rando-gen/`, the start screen font and the bundled libraries (SDL3,
+The AppImage holds `itprecomp`, `rando-gen/`, the start screen font and the bundled libraries (SDL3,
 FFmpeg, shaderc). Not bundled: glibc, libstdc++, the Vulkan loader and the GPU drivers (always the system's). No game
 files or fonts.
 
@@ -104,14 +104,14 @@ The aarch64 AppImage is experimental: built on x86-64, only its start screen has
    `deviceName`, `driverName` and `driverInfo`.
 3. **What happened**: start screen? extraction? in game? where it stopped, any visual problems (screenshots help).
    With a controller: its model, and whether it works (the log names it: `[input] gamepad: ...`).
-4. **The log**: `~/.local/share/eowrecomp/eowrecomp.log` (or the terminal output when started from a terminal).
+4. **The log**: `~/.local/share/itprecomp/itprecomp.log` (or the terminal output when started from a terminal).
    A crash writes `*** signal ...` and a backtrace there; attach the whole file.
 5. **A crash backtrace with gdb** when the log's isn't enough:
 
        ./LAS.Recomp-beta_4-linux-aarch64.AppImage --appimage-extract    # -> squashfs-root/
-       cd ~/.local/share/eowrecomp
+       cd ~/.local/share/itprecomp
        gdb -batch -ex 'handle SIGSEGV nostop noprint pass' -ex run -ex 'thread apply all bt 20' \
-           --args ~/squashfs-root/usr/bin/eowrecomp > gdb.txt 2>&1
+           --args ~/squashfs-root/usr/bin/itprecomp > gdb.txt 2>&1
 
    (Adjust the `squashfs-root` path to where you extracted it. The game itself uses SIGSEGV for memory watches, hence
    the `handle` line; a real crash still ends in the backtrace. Attach `gdb.txt`.)

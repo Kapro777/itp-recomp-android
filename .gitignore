@@ -41,7 +41,7 @@ build/
 *.dylib
 /cache/
 save/
-/eowrecomp.ini
+/itprecomp.ini
 # ---- tools and Python environments (machine-specific)
 tools/venv/
 venv/

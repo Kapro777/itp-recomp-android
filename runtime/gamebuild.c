@@ -117,8 +117,8 @@ static void args_free(Args *a) {
 
 // ------------------------------------------------------------------ the tools
 typedef struct {
-    char gen[1100], gen_script[1100];  // generator: eowgen, or (source checkout) the venv's python + tools/gen.py
-    char cc[1100];                     // compiler: zig (as `zig cc`), or EOWRECOMP_CC / clang
+    char gen[1100], gen_script[1100];  // generator: itpgen, or (source checkout) the venv's python + tools/gen.py
+    char cc[1100];                     // compiler: zig (as `zig cc`), or ITPRECOMP_CC / clang
     bool zig;
     char inc[1100], entry[1100], hle[1100];  // headers the game code includes, tools/gamelib_entry.c, HLE names
 #ifdef _WIN32
@@ -126,7 +126,7 @@ typedef struct {
     char zig_rt[1100];  // the release's zig: its runtime built ahead of time (zig/rt, tools/zig_slim.sh), "" = none
 #endif
 #ifdef __ANDROID__
-    // the app's native library folder (programs run only from there: libeowpython.so, libzig.so; and libmain.so, to
+    // the app's native library folder (programs run only from there: libitppython.so, libzig.so; and libmain.so, to
     // link against) and the NDK pieces unpacked from the APK's assets (files/ondevice/cckit: tools/android/ondevice/)
     char nlib[1100], kit[1100], ondev[1100];
 #endif
@@ -151,13 +151,13 @@ static bool native_lib_dir(char *out, size_t n) {
     return true;
 }
 
-// Phones: the generator is libeowpython.so running tools/gen.py, the compiler zig's clang and ld.lld (libzig.so) with
-// the NDK pieces (cckit/), all from the on-phone build's packaging. ondev: where EowActivity.buildTools unpacked the
+// Phones: the generator is libitppython.so running tools/gen.py, the compiler zig's clang and ld.lld (libzig.so) with
+// the NDK pieces (cckit/), all from the on-phone build's packaging. ondev: where ItpActivity.buildTools unpacked the
 // asset archive; NULL = not asked (only checks that the programs are there).
 static bool find_tools_android(Tools *t, const char *ondev) {
     memset(t, 0, sizeof *t);
     if (!native_lib_dir(t->nlib, sizeof t->nlib)) return false;
-    snprintf(t->gen, sizeof t->gen, "%s/libeowpython.so", t->nlib);
+    snprintf(t->gen, sizeof t->gen, "%s/libitppython.so", t->nlib);
     snprintf(t->cc, sizeof t->cc, "%s/libzig.so", t->nlib);
     t->zig = true;
     if (!file_exists(t->gen) || !file_exists(t->cc)) return false;
@@ -232,13 +232,13 @@ static bool find_tools(Tools *t) {
     return find_tools_android(t, NULL);
 #endif
     memset(t, 0, sizeof *t);
-    const char *e = getenv("EOWRECOMP_GEN");
+    const char *e = getenv("ITPRECOMP_GEN");
     if (e && *e) snprintf(t->gen, sizeof t->gen, "%s", e);
-    else if (!rt_resource("eowgen" SEP "eowgen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
+    else if (!rt_resource("itpgen" SEP "itpgen" PLAT_EXE_SUFFIX, NULL, t->gen, sizeof t->gen) &&
              !(rt_resource(NULL, "tools/" PLAT_VENV_PYTHON, t->gen, sizeof t->gen) &&
                rt_resource(NULL, "tools/gen.py", t->gen_script, sizeof t->gen_script)))
         return false;
-    e = getenv("EOWRECOMP_CC");
+    e = getenv("ITPRECOMP_CC");
     if (e && *e) snprintf(t->cc, sizeof t->cc, "%s", e);
     else if (rt_resource("zig" SEP "zig" PLAT_EXE_SUFFIX, NULL, t->cc, sizeof t->cc)) t->zig = true;
 #ifndef _WIN32
@@ -253,7 +253,7 @@ static bool find_tools(Tools *t) {
     if (b > s) s = b;
     if (s) *s = 0;
 #ifdef _WIN32
-    if (!rt_resource("eowrecomp.dll.a", "build/eowrecomp.dll.a", t->implib, sizeof t->implib)) return false;
+    if (!rt_resource("itprecomp.dll.a", "build/itprecomp.dll.a", t->implib, sizeof t->implib)) return false;
     t->zig_rt[0] = 0;
     if (t->zig && rt_resource("zig" SEP "rt" SEP "link.rsp", NULL, t->zig_rt, sizeof t->zig_rt)) {
         char *s = strrchr(t->zig_rt, '/'), *b = strrchr(t->zig_rt, '\\');
@@ -434,16 +434,16 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     if (!registered) registered = true, atexit(end_all);
     Tools t;
 #ifdef __ANDROID__
-    // the generator and the NDK pieces out of the APK's assets (once per app version: EowActivity.buildTools)
+    // the generator and the NDK pieces out of the APK's assets (once per app version: ItpActivity.buildTools)
     if (o->progress) o->progress(0, "Preparing the build tools...");
-    // (test: EOWRECOMP_ONDEVICE_DIR=<an unpacked ondevice.zip>, without the app's Java side)
-    const char *ondev = getenv("EOWRECOMP_ONDEVICE_DIR");
+    // (test: ITPRECOMP_ONDEVICE_DIR=<an unpacked ondevice.zip>, without the app's Java side)
+    const char *ondev = getenv("ITPRECOMP_ONDEVICE_DIR");
     if (!ondev || !*ondev) ondev = android_build_tools();
     if (!ondev || !find_tools_android(&t, ondev)) {
 #else
     if (!find_tools(&t)) {
 #endif
-        snprintf(why, why_size, "the game code builder is missing from this copy of EoWRecomp");
+        snprintf(why, why_size, "the game code builder is missing from this copy of ITPRecomp");
         return false;
     }
 #ifdef __ANDROID__
@@ -462,9 +462,9 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
         android_jobs = ncpu;
         char v[2400];
         snprintf(v, sizeof v, "%s/pyhome", ondev);
-        setenv("EOWPY_HOME", v, 1);
+        setenv("ITPPY_HOME", v, 1);
         snprintf(v, sizeof v, "%s/tools:%s/pyhome/lib/python3.14/site-packages", ondev, ondev);
-        setenv("EOWPY_PATH", v, 1);
+        setenv("ITPPY_PATH", v, 1);
         setenv("LIBCAPSTONE_PATH", t.nlib, 1);
         setenv("LIBUNICORN_PATH", t.nlib, 1);
         setenv("TMPDIR", ondev, 1);
@@ -526,8 +526,8 @@ bool gamebuild_run(const char *game_dir, const GameBuildOpts *o, char *why, size
     long low_mem = -1;        // the lowest MemAvailable seen while starting compilers (the log, for tuning)
     int held = 0;             // compiler starts put off for memory
 #endif
-    {   // (testing / tuning: EOWRECOMP_BUILD_JOBS)
-        const char *e = getenv("EOWRECOMP_BUILD_JOBS");
+    {   // (testing / tuning: ITPRECOMP_BUILD_JOBS)
+        const char *e = getenv("ITPRECOMP_BUILD_JOBS");
         if (e && atoi(e) > 0) jobs = atoi(e) > 64 ? 64 : atoi(e);
     }
     struct { PlatProc p; int unit; } run[64];

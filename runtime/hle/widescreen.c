@@ -26,5 +26,5 @@ void widescreen_present_crop(uint64_t frame, double shape, float crop[4], double
 // Current level name for logs: unknown for Echoes of Wisdom so far.
 const char *game_level_name(void) { return "-"; }
 
-// Test hook: the next presented frame is saved to this path (EOWRECOMP_HOST_INPUT "shot" entries, runtime/hle/input.c).
+// Test hook: the next presented frame is saved to this path (ITPRECOMP_HOST_INPUT "shot" entries, runtime/hle/input.c).
 char g_window_shot_request[256];

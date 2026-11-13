@@ -31,9 +31,9 @@ _Static_assert(offsetof(Cpu, v) == 512, "v");
 
 typedef void (*GuestFn)(Cpu *);
 
-// What the game code library calls in the app. On Windows the .exe exports them (EOW_RUNTIME: compiling the app)
-// and the library imports them through tools/windows/eowrecomp.def; elsewhere the dynamic linker binds them.
-#if defined(_WIN32) && defined(EOW_RUNTIME)
+// What the game code library calls in the app. On Windows the .exe exports them (ITP_RUNTIME: compiling the app)
+// and the library imports them through tools/windows/itprecomp.def; elsewhere the dynamic linker binds them.
+#if defined(_WIN32) && defined(ITP_RUNTIME)
 #define RT_API __declspec(dllexport)
 #elif defined(_WIN32)
 #define RT_API __declspec(dllimport)
@@ -78,12 +78,12 @@ typedef uint32_t __attribute__((aligned(1), may_alias)) u32u;
 typedef uint64_t __attribute__((aligned(1), may_alias)) u64u;
 typedef uint8_t __attribute__((may_alias)) u8a;
 
-// Function-entry profiler (runtime/fnprof.c, EOWRECOMP_FNPROF at run time): only in game code built with
-// -DEOWRECOMP_FNPROF (make FNPROF=1). Off, a call costs nothing: the check (a GOT load, a load and a branch on every
+// Function-entry profiler (runtime/fnprof.c, ITPRECOMP_FNPROF at run time): only in game code built with
+// -DITPRECOMP_FNPROF (make FNPROF=1). Off, a call costs nothing: the check (a GOT load, a load and a branch on every
 // guest call) was ~10% of the game code's instructions (measured in LASRecomp-Android-Plus).
 RT_API extern volatile int g_fnprof;
 RT_API void fnprof_hit(uint64_t addr, uint64_t lr, uint64_t x0);
-#ifdef EOWRECOMP_FNPROF
+#ifdef ITPRECOMP_FNPROF
 #define FN_ENTER(a) do { if (__builtin_expect(g_fnprof, 0)) fnprof_hit(a, c->x[30], c->x[0]); } while (0)
 #else
 #define FN_ENTER(a) ((void)0)

@@ -25,7 +25,7 @@ static const char *const skip_names[SKIP_NREASONS] = {"no program", "program com
 static uint64_t stat_skip_why[SKIP_NREASONS];
 #define SKIP(why) (stat_skipped++, stat_skip_why[why]++)
 static uint64_t stat_upload_bytes;
-// EOWRECOMP_VK_PROF=1: render-thread time per category in the fps log (exec = whole command lists, draw = draw(),
+// ITPRECOMP_VK_PROF=1: render-thread time per category in the fps log (exec = whole command lists, draw = draw(),
 // sets = descriptor sets incl. cbuf copies, vtx = index scan + vertex copies, submit = vkQueueSubmit2)
 static int prof = -1;
 static uint64_t prof_exec, prof_draw, prof_sets, prof_vtx, prof_submit, prof_pre, prof_key, prof_dyn, prof_tex, prof_up, prof_gpu;
@@ -65,7 +65,7 @@ uint64_t vk_completed_seq(void) {
     return v;
 }
 
-// (EOWRECOMP_VK_PROF) waits on the GPU by cause: the caller names it in wait_why just before waiting
+// (ITPRECOMP_VK_PROF) waits on the GPU by cause: the caller names it in wait_why just before waiting
 static __thread const char *wait_why;
 static struct { const char *why; uint64_t ns, n; } wait_tab[12];
 static pthread_mutex_t wait_tab_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -108,7 +108,7 @@ uint64_t vk_pending_seq(void) { return submit_seq + 1; }
 // timestamp at its place in the command stream; once that submission is done (the game waits on its fence before
 // reading - on the Switch the GPU writes them too) the GPU time replaces the provisional host value, in the host
 // clock's terms (offset calibrated at each resolve: a timestamp can't be later than the moment its submission is seen
-// done). EOWRECOMP_VK_COUNTER=cpu: host clock only; =frozen: one value per presented frame (test); =legacy: the host
+// done). ITPRECOMP_VK_COUNTER=cpu: host clock only; =frozen: one value per presented frame (test); =legacy: the host
 // clock in ns instead of GPU ticks, as before (test: reproduces the locked 30).
 #define CQ_MAX 64
 typedef struct { VkQueryPool pool; uint32_t n; uint64_t seq; uint64_t *out[CQ_MAX]; } CounterQ;
@@ -124,7 +124,7 @@ static uint64_t stat_counters_gpu;
 
 static int vk_counter_mode(void) {
     if (counter_mode < 0) {
-        const char *e = getenv("EOWRECOMP_VK_COUNTER");
+        const char *e = getenv("ITPRECOMP_VK_COUNTER");
         counter_mode = e && !strcmp(e, "cpu") ? 0 : e && !strcmp(e, "frozen") ? 1 : e && !strcmp(e, "legacy") ? 3 : 2;
         if (counter_mode == 2 && !g_vk.props.limits.timestampComputeAndGraphics) counter_mode = 0;
     }
@@ -141,7 +141,7 @@ static int vk_counter_mode(void) {
 // frames don't fit 60 (12 of the last 60 over 16.2 ms), the counters report a frame of at least PACE_SLOW_NS: the game
 // takes its 30 fps mode, at full speed. Back to the real times after 2 s with headroom (busy under 13 ms on average,
 // at most 2 of the last 60 frames over). The game itself also tries 60 again now and then.
-// EOWRECOMP_PACE=0: off.
+// ITPRECOMP_PACE=0: off.
 #define PACE_SLOW_NS 20000000ull
 extern __thread uint64_t g_blocked_ns;  // kernel.c: this thread's time blocked in waits / sleeps
 static bool pace_slow;
@@ -149,7 +149,7 @@ static uint64_t stat_pace_over;
 
 void vk_pace_frame(void) {
     static int on = -1;
-    if (on < 0) { const char *e = getenv("EOWRECOMP_PACE"); on = !e || atoi(e) != 0; }
+    if (on < 0) { const char *e = getenv("ITPRECOMP_PACE"); on = !e || atoi(e) != 0; }
     static uint64_t last, last_wait;
     static uint8_t over[60];
     static int idx, nover, calm;
@@ -161,15 +161,15 @@ void vk_pace_frame(void) {
     if (first || p > 100000000ull) return;  // (loading, a hitch: not a pace)
     double busy = (p > wt ? p - wt : 0) / 1e6;
     avg = avg ? avg + (busy - avg) * 0.05 : busy;
-    static int log = -1;  // EOWRECOMP_LOG_PACE=1: each frame's period, vsync wait and busy time
-    if (log < 0) log = getenv("EOWRECOMP_LOG_PACE") != NULL;
+    static int log = -1;  // ITPRECOMP_LOG_PACE=1: each frame's period, vsync wait and busy time
+    if (log < 0) log = getenv("ITPRECOMP_LOG_PACE") != NULL;
     if (log) LOG("[pace] period %.2f blocked %.2f busy %.2f ms\n", p / 1e6, wt / 1e6, busy);
     int o = busy > 16.2;
     stat_pace_over += o;
     nover += o - over[idx];
     over[idx] = (uint8_t)o;
     idx = (idx + 1) % 60;
-    if (!on) return;  // (measured and counted all the same: EOWRECOMP_LOG_PACE, the stats)
+    if (!on) return;  // (measured and counted all the same: ITPRECOMP_LOG_PACE, the stats)
     if (!pace_slow && nover >= 12) {
         pace_slow = true, calm = 0;
         LOG("[pace] frames don't fit 60 fps (%d of the last 60 over 16.2 ms busy): the game's 30 fps mode\n", nover);
@@ -199,8 +199,8 @@ static void cq_resolve(int i) {  // (cq_lock held) submission slot i is done: it
         double per = g_vk.props.limits.timestampPeriod;
         int64_t cand = (int64_t)plat_now_ns() - (int64_t)((double)t[q->n - 1] * per);
         if (!cq_calibrated || cand < cq_offset) cq_offset = cand, cq_calibrated = true;
-        static int log = -1;  // EOWRECOMP_LOG_COUNTER=1: the host (provisional) and GPU times of each counter
-        if (log < 0) log = getenv("EOWRECOMP_LOG_COUNTER") != NULL;
+        static int log = -1;  // ITPRECOMP_LOG_COUNTER=1: the host (provisional) and GPU times of each counter
+        if (log < 0) log = getenv("ITPRECOMP_LOG_COUNTER") != NULL;
         for (uint32_t k = 0; k < q->n; k++) {
             uint64_t gpu = ns_to_gpu_ticks((uint64_t)((int64_t)((double)t[k] * per) + cq_offset));
             if (log) LOG("[counter] seq %llu #%u at %llx host %.3f gpu %.3f ms\n", (unsigned long long)q->seq, k,
@@ -301,20 +301,20 @@ void vk_full_barrier(VkCommandBuffer cb) {
 static void ring_retire(void);
 void vc_flush(void);
 
-// ---- EOWRECOMP_GPUPROF_AT=<frame>: GPU time per pass / dispatch / copy of that frame, logged as "[gpuprof]".
+// ---- ITPRECOMP_GPUPROF_AT=<frame>: GPU time per pass / dispatch / copy of that frame, logged as "[gpuprof]".
 // A timestamp (ALL_COMMANDS: after everything before it) at each mark; a row = the work since the previous mark.
 bool g_gpuprof_frame;
 static VkQueryPool gp_qp;
 static int gp_n;
 static char gp_label[512][112];
 static uint32_t gp_draws[512];
-// EOWRECOMP_VK_DEVLOST_TRACE=1: the last 64 GPU operations, dumped on device loss (with EOWRECOMP_SYNC_SUBMIT=1 the
+// ITPRECOMP_VK_DEVLOST_TRACE=1: the last 64 GPU operations, dumped on device loss (with ITPRECOMP_SYNC_SUBMIT=1 the
 // dump ends with the command list that faulted).
 static char dl_ring[64][128];
 static unsigned dl_n;
 static int dl_on = -1;
 static void dl_note(const char *fmt, ...) {
-    if (dl_on < 0) dl_on = getenv("EOWRECOMP_VK_DEVLOST_TRACE") ? atoi(getenv("EOWRECOMP_VK_DEVLOST_TRACE")) : 0;
+    if (dl_on < 0) dl_on = getenv("ITPRECOMP_VK_DEVLOST_TRACE") ? atoi(getenv("ITPRECOMP_VK_DEVLOST_TRACE")) : 0;
     if (!dl_on) return;
     va_list ap;
     va_start(ap, fmt);
@@ -475,7 +475,7 @@ static int new_chunk(uint64_t size) {
                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT};
     VmaAllocationCreateInfo ai = {.usage = VMA_MEMORY_USAGE_AUTO,
                                   .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT};
-    if (getenv("EOWRECOMP_VK_RING_SYSMEM")) ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;  // (test: a GPU without resizable BAR)
+    if (getenv("ITPRECOMP_VK_RING_SYSMEM")) ai.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;  // (test: a GPU without resizable BAR)
     VmaAllocationInfo info;
     VK_CHECK(vmaCreateBuffer(g_vk.vma, &bi, &ai, &c->buf, &c->mem, &info));
     c->ptr = info.pMappedData;
@@ -572,7 +572,7 @@ static VkSpan guest_copy(uint64_t addr, uint64_t size) {
 
 // ================================================================== worker threads (shader / pipeline builds)
 // First-use compiles run off the render thread; draws needing them are skipped until ready (as on Metal).
-// EOWRECOMP_SYNC_SHADERS=1 builds on first use, blocking (deterministic tests).
+// ITPRECOMP_SYNC_SHADERS=1 builds on first use, blocking (deterministic tests).
 typedef struct Job { void (*fn)(void *); void *arg; struct Job *next; } Job;
 static Job *jobs_head, *jobs_tail;
 static pthread_mutex_t jobs_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -595,7 +595,7 @@ static void *worker(void *a) {
 
 static bool sync_shaders(void) {
     static int v = -1;
-    if (v < 0) v = getenv("EOWRECOMP_SYNC_SHADERS") != NULL;
+    if (v < 0) v = getenv("ITPRECOMP_SYNC_SHADERS") != NULL;
     return v;
 }
 
@@ -695,7 +695,7 @@ uint32_t nvn_window_origin(void);
 uint32_t nvn_depth_mode(void);
 bool renderer_origin_lower_left(void) { return nvn_window_origin() == 0; }
 
-// (EOWRECOMP_VK_PROF) called once per presented frame: frames over 50 ms are logged with where their time went.
+// (ITPRECOMP_VK_PROF) called once per presented frame: frames over 50 ms are logged with where their time went.
 // present_ns: time in backend_present's acquire/blit/present.
 void vk_prof_frame(uint64_t frame, uint64_t present_ns) {
     if (!prof) return;
@@ -800,7 +800,7 @@ static void st_defaults(void) {
 }
 
 void vk_exec_init(void) {
-    prof = getenv("EOWRECOMP_VK_PROF") != NULL;
+    prof = getenv("ITPRECOMP_VK_PROF") != NULL;
     if (prof) {
         prof_up_ns = 0;
         VkQueryPoolCreateInfo qi = {.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO, .queryType = VK_QUERY_TYPE_TIMESTAMP, .queryCount = SUBS * 2};
@@ -833,7 +833,7 @@ static int debug_pass_no;
 // render pass (present, ImGui, post-processing and copies all run between game passes) and the clear pipeline.
 // Descriptor sets are not filtered: every draw writes new ones (sharing identical sets within a submission was tried:
 // a third matched, but comparing them cost more than allocating and writing them on NVIDIA).
-// EOWRECOMP_VK_STATE_FILTER=0: every draw sets everything, as before.
+// ITPRECOMP_VK_STATE_FILTER=0: every draw sets everything, as before.
 enum { SS_PIPE = 1 << 0, SS_DT = 1 << 1, SS_DW = 1 << 2, SS_DOP = 1 << 3, SS_STEN = 1 << 4, SS_SFACE0 = 1 << 5, SS_SFACE1 = 1 << 6,
        SS_BC = 1 << 7, SS_CULL = 1 << 8, SS_FF = 1 << 9, SS_TOPO = 1 << 10, SS_PRE = 1 << 11, SS_DBE = 1 << 12, SS_DB = 1 << 13,
        SS_VP = 1 << 14, SS_SC = 1 << 15, SS_IB = 1 << 16 };
@@ -856,7 +856,7 @@ static struct {
 static int ss_on = -1;
 static void ss_forget(void) { ss.known = 0; ss.vb_known = 0; }
 static bool ss_enabled(void) {
-    if (ss_on < 0) { const char *e = getenv("EOWRECOMP_VK_STATE_FILTER"); ss_on = !e || atoi(e) != 0; }
+    if (ss_on < 0) { const char *e = getenv("ITPRECOMP_VK_STATE_FILTER"); ss_on = !e || atoi(e) != 0; }
     return ss_on;
 }
 // true: the state must be recorded (and is remembered as known)
@@ -878,7 +878,7 @@ static void vk_end_pass_at(int line) {
         char path[256];
         static uint64_t debug_pass_frame = ~0ull;
         static int multi = -1;
-        if (multi < 0) multi = getenv("EOWRECOMP_DEBUG_FRAMES") != NULL;
+        if (multi < 0) multi = getenv("ITPRECOMP_DEBUG_FRAMES") != NULL;
         if (multi && renderer_present_count() != debug_pass_frame) { debug_pass_frame = renderer_present_count(); debug_pass_no = 0; }
         if (multi) snprintf(path, sizeof path, "build/pass_%llu_%03d.png", (unsigned long long)debug_pass_frame, debug_pass_no++);
         else snprintf(path, sizeof path, "build/pass_%03d.png", debug_pass_no++);
@@ -891,7 +891,7 @@ static uint32_t level_extent(uint32_t v, uint32_t lv) { v >>= lv; return v ? v :
 static void begin_pass(void) {
     if (in_pass && !st.rt_dirty) return;
     vk_end_pass();
-    if (dl_on == 2) renderer_flush();  // (EOWRECOMP_VK_DEVLOST_TRACE=2: each pass its own submission)
+    if (dl_on == 2) renderer_flush();  // (ITPRECOMP_VK_DEVLOST_TRACE=2: each pass its own submission)
     st.rt_dirty = false;
     VkCommandBuffer cb = vk_cmd();
     vk_full_barrier(cb);  // passes, copies and dispatches see each other's results
@@ -1188,7 +1188,7 @@ static VkPipelineLayout make_layout(Prog *p, int nsets, VkShaderStageFlags s0, V
 }
 
 static void save_glsl(const char *src, uint64_t addr, const char *suffix) {
-    if (!getenv("EOWRECOMP_SAVE_MSL")) return;
+    if (!getenv("ITPRECOMP_SAVE_MSL")) return;
     mkdir("build/glsl", 0755);
     char path[256];
     snprintf(path, sizeof path, "build/glsl/%llx_%s.glsl", (unsigned long long)addr, suffix);
@@ -1215,7 +1215,7 @@ static void compile_program(void *arg) {
 
 static void translate_program(void *arg) {
     Prog *p = arg;
-    { static int g = -1; if (g < 0) { const char *e = getenv("EOWRECOMP_SHADER_GUARD"); g = e ? atoi(e) : 0; if (g > 0) maxwell_loop_guard = (uint32_t)g; } }
+    { static int g = -1; if (g < 0) { const char *e = getenv("ITPRECOMP_SHADER_GUARD"); g = e ? atoi(e) : 0; if (g > 0) maxwell_loop_guard = (uint32_t)g; } }
     maxwell_gmem_base = HEAP_BASE;
     maxwell_gmem_size = HEAP_MAX;
     pthread_mutex_lock(&translate_lock);
@@ -1623,10 +1623,10 @@ static void debug_save_depth(TexBackend *b, const char *path) {
     LOG("[vk] saved %s (%ux%u depth %.6f..%.6f)\n", path, b->width, b->height, lo, hi);
 }
 
-// (debug) EOWRECOMP_COPY_TRACE=<frame>: draws' attachments / sampled textures, copies and snapshots of that frame ("[ct]")
+// (debug) ITPRECOMP_COPY_TRACE=<frame>: draws' attachments / sampled textures, copies and snapshots of that frame ("[ct]")
 static bool ct_on(void) {
     static const char *e = (const char *)1;
-    if (e == (const char *)1) e = getenv("EOWRECOMP_COPY_TRACE");
+    if (e == (const char *)1) e = getenv("ITPRECOMP_COPY_TRACE");
     if (!e) return false;
     static uint64_t memo_f = ~0ull;
     static bool memo;
@@ -1669,7 +1669,7 @@ static void ct_draw(Prog *pr, const char *what) {
 //   - anything else (a draw writing depth / stencil, a partial clear, a copy or upload into either, the
 //     destination bound as an attachment, a texture freed or reallocated): the real copy is made first.
 // Only same-size, same-format, single-level, single-sample depth/stencil images, whole-image copies.
-// EOWRECOMP_VK_COPY_OPT=0: always copy (the old behaviour).
+// ITPRECOMP_VK_COPY_OPT=0: always copy (the old behaviour).
 typedef struct { NvnTexture *src, *dst; VkImage simg, dimg; } CopyAlias;
 extern uint32_t vk_view_gen;
 static CopyAlias aliases[8];
@@ -1678,7 +1678,7 @@ static uint64_t stat_alias_made, stat_alias_renamed, stat_alias_partial, stat_al
 
 static int copy_opt(void) {
     static int on = -1;
-    if (on < 0) { const char *e = getenv("EOWRECOMP_VK_COPY_OPT"); on = e && *e ? atoi(e) : 1; }
+    if (on < 0) { const char *e = getenv("ITPRECOMP_VK_COPY_OPT"); on = e && *e ? atoi(e) : 1; }
     return on;
 }
 
@@ -1716,7 +1716,7 @@ static void alias_before_write(NvnTexture *t, VkImageAspectFlags full, const cha
         CopyAlias *a = &aliases[i];
         if (!alias_valid(a)) { alias_drop(i); continue; }
         if (a->dst != t) continue;
-        // (EOWRECOMP_VK_COPY_OPT=2: all aspects even then - for comparing the stencil-only copy's cost)
+        // (ITPRECOMP_VK_COPY_OPT=2: all aspects even then - for comparing the stencil-only copy's cost)
         alias_copy(a, ((TexBackend *)t->backend)->aspect & (copy_opt() == 2 ? ~0u : ~full), why);
         alias_drop(i);
     }
@@ -1810,7 +1810,7 @@ static void alias_draw_check(void) {
 static void resolve_feedback(Prog *pr) {
     nfeedback = 0;
     static int off = -1;
-    if (off < 0) off = getenv("EOWRECOMP_NO_FEEDBACK") != NULL;
+    if (off < 0) off = getenv("ITPRECOMP_NO_FEEDBACK") != NULL;
     if (off) return;
     ShaderInfo *infos[2] = {pr->vi, pr->fi};
     for (int sg = 0; sg < 2; sg++)
@@ -1821,7 +1821,7 @@ static void resolve_feedback(Prog *pr) {
             for (int k = 0; k < nfeedback; k++) have |= feedback_tex[k] == t;
             if (have || nfeedback == 4) continue;
             static int nosnap = -1;
-            if (nosnap < 0) nosnap = getenv("EOWRECOMP_NO_SNAPSHOT_REUSE") != NULL;
+            if (nosnap < 0) nosnap = getenv("ITPRECOMP_NO_SNAPSHOT_REUSE") != NULL;
             int si = -1;
             for (int k = 0; k < 8; k++) if (snap_tex[k] == t) si = k;
             bool self_write = t == st.rt.depth && st.ds[0] && st.ds[1];
@@ -1916,7 +1916,7 @@ static VkDescriptorBufferInfo cbuf_info(int stage, ShaderInfo *si, int k, uint32
 // Global memory (shader LDG/STG, maxwell_gmem_base = HEAP_BASE): the guest heap imported as a GPU buffer
 // (VK_EXT_external_memory_host), zero-copy like metal.m's g_guest_buffer, so compute results land in guest
 // memory. The import pins its pages, so it covers only the heap the game set up (SetHeapSize), made on first use.
-// EOWRECOMP_VK_NO_GMEM=1: no import, reads return zero.
+// ITPRECOMP_VK_NO_GMEM=1: no import, reads return zero.
 static VkBuffer gmem_buf;
 static VkDeviceMemory gmem_mem;
 static uint64_t gmem_size;
@@ -1959,7 +1959,7 @@ static uint64_t gmem_tried;  // heap size the import was last attempted for (gme
 
 static VkDescriptorBufferInfo gmem_info(void) {
     static int off = -1;
-    if (off < 0) off = getenv("EOWRECOMP_VK_NO_GMEM") != NULL || !g_vk.host_import;
+    if (off < 0) off = getenv("ITPRECOMP_VK_NO_GMEM") != NULL || !g_vk.host_import;
     uint64_t want = (kernel_heap_size() + 0xFFFF) & ~0xFFFFull;
     if (want > HEAP_MAX) want = HEAP_MAX;
     if (!off && want > gmem_size && !gmem_import(want)) {
@@ -1973,13 +1973,13 @@ static VkDescriptorBufferInfo gmem_info(void) {
 }
 
 // Compute dispatches that use global memory: the imported heap is host memory across PCIe on a discrete GPU, and a
-// shader storing to it in a loop crawls (the little chain chomps in Madam MeowMeow's house: ~8 ms a frame on a GTX 1660
+// shader storing to it in a loop crawls (the little chain chomps in Madam MitpMitp's house: ~8 ms a frame on a GTX 1660
 // Super and on an RTX 3080 Ti alike, which the game then waits for on its fence - 49-53 fps there on the 1660). Before
 // such a dispatch its bound storage buffers (sorted, merged) are copied into a device-local buffer, the address table
 // (binding GMAP_BUFFER_INDEX) tells the shader (translate.c, GLSL compute) where each range sits, loads and stores
 // inside them use that copy, and a shader that stores gets the ranges copied back to the heap right after it (the
 // game alternates its buffer sets per frame: the CPU isn't writing them meanwhile). Accesses outside the table use
-// the heap as before. EOWRECOMP_VK_GMEM_FAST=0: no copy (empty table: everything goes to the heap, the old behaviour);
+// the heap as before. ITPRECOMP_VK_GMEM_FAST=0: no copy (empty table: everything goes to the heap, the old behaviour);
 // off by default on unified-memory GPUs (gfast_prepare).
 #define GFAST_SIZE (32ull << 20)
 static VkBuffer gfast_buf;
@@ -2004,7 +2004,7 @@ static void gfast_prepare(VkCommandBuffer cb) {
     // (default: discrete GPUs only - with unified memory (Apple Silicon, phones, integrated GPUs) the heap import is
     // the GPU's own memory already, and the copies would only add work)
     if (on < 0) {
-        const char *e = getenv("EOWRECOMP_VK_GMEM_FAST");
+        const char *e = getenv("ITPRECOMP_VK_GMEM_FAST");
         on = e ? atoi(e) != 0 : g_vk.props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
     }
     memset(gmap_tab, 0, sizeof gmap_tab);
@@ -2040,9 +2040,9 @@ static void gfast_prepare(VkCommandBuffer cb) {
         off += (len + 255) & ~255ull;
     }
     if (!m) return;
-    if (getenv("EOWRECOMP_LOG_GFAST")) {  // (debug) =<shader code address hex>: that shader's first tables
+    if (getenv("ITPRECOMP_LOG_GFAST")) {  // (debug) =<shader code address hex>: that shader's first tables
         static int nlog;
-        if (st.program->stages[5].code_addr == strtoull(getenv("EOWRECOMP_LOG_GFAST"), NULL, 16) && nlog++ < 40) {
+        if (st.program->stages[5].code_addr == strtoull(getenv("ITPRECOMP_LOG_GFAST"), NULL, 16) && nlog++ < 40) {
             LOG("[gfast] cs %llx: %d ranges, %llu KB:", (unsigned long long)st.program->stages[5].code_addr, m, (unsigned long long)(off >> 10));
             for (int i = 0; i < m; i++) LOG(" %llx+%llx", (unsigned long long)(r[i].lo + HEAP_BASE), (unsigned long long)(r[i].hi - r[i].lo));
             LOG("\n");
@@ -2074,7 +2074,7 @@ static void gfast_finish(VkCommandBuffer cb) {
 // sequential GPU copy of the written pages in the submission's upload buffer (which completes before its draws) instead
 // of fetches across the bus. Overlapping ranges are separate entries; the per-page generation keeps them all current.
 // Pages the GPU writes itself (a compute dispatch's copy-back, gfast_finish) are never cached: draws over them read the
-// heap in place as before, and so does everything when the OS gives no write tracking. EOWRECOMP_VK_VCACHE=0: off.
+// heap in place as before, and so does everything when the OS gives no write tracking. ITPRECOMP_VK_VCACHE=0: off.
 #define VC_PAGE 4096ull
 #define VC_TAB 8192                   // entries (open addressing)
 #define VC_MAX_RANGE (64ull << 20)    // larger bound ranges: read in place
@@ -2168,7 +2168,7 @@ static void vc_mark_sbufs(int stage) {
 
 static bool vcache_lookup(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
     if (vc_on < 0) {
-        const char *e = getenv("EOWRECOMP_VK_VCACHE");
+        const char *e = getenv("ITPRECOMP_VK_VCACHE");
         vc_on = !e || atoi(e) != 0;
         if (vc_on && !pt_init()) {
             LOG("[vk] vertex cache off: no page write tracking\n");
@@ -2276,11 +2276,11 @@ void vc_flush(void) {
 
 // Vertex / index data from the imported guest heap (renderer.m bind_guest reads g_guest_buffer the same way): the
 // device-local cache above, else read in place - no per-draw copy, no index scan for the copy size. The game fences its
-// CPU writes as on the Switch. Falls back to copies outside the heap or without the import; EOWRECOMP_VK_COPY_VERTICES=1
+// CPU writes as on the Switch. Falls back to copies outside the heap or without the import; ITPRECOMP_VK_COPY_VERTICES=1
 // forces copies.
 static bool guest_direct(uint64_t addr, uint64_t size, VkBuffer *buf, VkDeviceSize *off) {
     static int copy = -1;
-    if (copy < 0) copy = getenv("EOWRECOMP_VK_COPY_VERTICES") != NULL;
+    if (copy < 0) copy = getenv("ITPRECOMP_VK_COPY_VERTICES") != NULL;
     if (copy || addr < HEAP_BASE) return false;
     if (addr + size > HEAP_BASE + gmem_size && kernel_heap_size() != gmem_tried) { gmem_tried = kernel_heap_size(); gmem_info(); }
     if (!gmem_buf || addr + size > HEAP_BASE + gmem_size) return false;
@@ -2332,11 +2332,11 @@ static void texture_info(int stage, ShaderInfo *si, int i, VkDescriptorImageInfo
         if (e->tex) {
             // Per-frame memo: ~2400 lookups per overworld frame recomputed the view (format / range math, cache
             // probe). The first lookup of a frame still runs vk_view (upload check); a view that may have been
-            // destroyed (eviction, image re-created) bumps vk_view_gen. EOWRECOMP_VK_NO_TEX_MEMO=1 disables.
+            // destroyed (eviction, image re-created) bumps vk_view_gen. ITPRECOMP_VK_NO_TEX_MEMO=1 disables.
             extern uint32_t vk_view_gen;
             extern uint64_t vk_frame_counter(void);
             static int nomemo = -1;
-            if (nomemo < 0) nomemo = getenv("EOWRECOMP_VK_NO_TEX_MEMO") != NULL;
+            if (nomemo < 0) nomemo = getenv("ITPRECOMP_VK_NO_TEX_MEMO") != NULL;
             static struct { NvnTexture *tex; uint64_t vh, frame; uint32_t gen; uint8_t type, has_view; VkImageView view; } memo[1024];
             uint64_t vh = e->has_view ? hash_words(0, &e->view, sizeof e->view) : 0, frame = vk_frame_counter();
             uint32_t ms = (uint32_t)((((uintptr_t)e->tex >> 4) ^ vh ^ (uint64_t)st_->type * 0x9E3779B97F4A7C15ull) & 1023);
@@ -2495,12 +2495,12 @@ static void dispatch_compute(uint32_t gx, uint32_t gy, uint32_t gz) {
     if (!st.program || !gx || !gy || !gz) return;
     CsProg *cp = compute_program(st.program);
     if (!cp || atomic_load(&cp->p.state) != 1) { SKIP(SKIP_COMPUTE_PROG); return; }
-    {   // EOWRECOMP_SKIP_CS=<code address hex> (debug): skip that compute shader's dispatches, to see what it does
+    {   // ITPRECOMP_SKIP_CS=<code address hex> (debug): skip that compute shader's dispatches, to see what it does
         static uint64_t skip = ~0ull;
-        if (skip == ~0ull) { const char *e = getenv("EOWRECOMP_SKIP_CS"); skip = e ? strtoull(e, NULL, 16) : 0; }
+        if (skip == ~0ull) { const char *e = getenv("ITPRECOMP_SKIP_CS"); skip = e ? strtoull(e, NULL, 16) : 0; }
         if (skip && st.program->stages[5].code_addr == skip) { SKIP(SKIP_LIST); return; }
     }
-    if (cp->si->uses_gmem && getenv("EOWRECOMP_LOG_CS_SBUF")) {  // (debug) the storage buffers bound to gmem dispatches
+    if (cp->si->uses_gmem && getenv("ITPRECOMP_LOG_CS_SBUF")) {  // (debug) the storage buffers bound to gmem dispatches
         static uint64_t seen_cs[16];
         static int seen_n[16];
         int k = 0;
@@ -2589,7 +2589,7 @@ static void draw_(CmdRec *r, bool indexed) {
     for (int i = 0; i < st.rt.ncolor; i++) if (st.rt.color[i]) fkey.rt_kind[i] = (uint8_t)rt_kind(st.rt.color[i]->format);
     Prog *pr = get_program(st.program, &vkey, &fkey);
     if (!pr || atomic_load(&pr->state) != 1) { SKIP(pr && atomic_load(&pr->state) == 0 ? SKIP_PROG_PENDING : SKIP_PROG_FAILED); return; }
-    {   // fragment-shader hash: skip lists (EOWRECOMP_SKIP_FSHASH), debug logging
+    {   // fragment-shader hash: skip lists (ITPRECOMP_SKIP_FSHASH), debug logging
         static uint64_t last_fs, last_hash;
         uint64_t fs = st.program->stages[1].code_addr;
         if (fs != last_fs) {
@@ -2600,13 +2600,13 @@ static void draw_(CmdRec *r, bool indexed) {
         static int nskip = -1;
         if (nskip < 0) {
             nskip = 0;
-            for (const char *p = getenv("EOWRECOMP_SKIP_FSHASH"); p && *p && nskip < 16;) {
+            for (const char *p = getenv("ITPRECOMP_SKIP_FSHASH"); p && *p && nskip < 16;) {
                 skip[nskip++] = strtoull(p, (char **)&p, 16);
                 while (*p == ',') p++;
             }
         }
         for (int i = 0; i < nskip; i++) if (last_hash == skip[i]) { SKIP(SKIP_LIST); return; }
-        if (g_debug_frame && getenv("EOWRECOMP_LOG_FSHASH")) LOG("[fshash] fs=%llx hash %016llx\n", (unsigned long long)fs, (unsigned long long)last_hash);
+        if (g_debug_frame && getenv("ITPRECOMP_LOG_FSHASH")) LOG("[fshash] fs=%llx hash %016llx\n", (unsigned long long)fs, (unsigned long long)last_hash);
         g_cur_fs_hash = last_hash;
     }
     if (g_debug_frame) debug_draw(pr, r, indexed);
@@ -2693,7 +2693,7 @@ static void draw_(CmdRec *r, bool indexed) {
 
     // ---- depth / stencil (dynamic)
     static int nodt = -1;
-    if (nodt < 0) nodt = getenv("EOWRECOMP_NO_DEPTH_TEST") != NULL;
+    if (nodt < 0) nodt = getenv("ITPRECOMP_NO_DEPTH_TEST") != NULL;
     bool dt = st.ds[0] && !nodt && pass_depth;
     if (ss_need(SS_DT, ss.dt == (VkBool32)dt)) { ss.dt = dt; vkCmdSetDepthTestEnable(cb, dt); }
     VkBool32 dw = dt && st.ds[1];
@@ -2701,11 +2701,11 @@ static void draw_(CmdRec *r, bool indexed) {
     VkCompareOp dop = dt ? compare_fn(st.ds[2]) : VK_COMPARE_OP_ALWAYS;
     // EQUAL against a depth pre-pass written by a different vertex shader (foliage, trees) needs both shaders to land
     // on identical depths. They do since the translator stopped using unpackHalf2x16 (NVIDIA ran the half math after
-    // it in fp16, differently per shader: black slashes in foliage). EOWRECOMP_VK_EQUAL_TOL=1 brings back the old
+    // it in fp16, differently per shader: black slashes in foliage). ITPRECOMP_VK_EQUAL_TOL=1 brings back the old
     // workaround: LESS_OR_EQUAL with a few ulps of bias towards the camera, which also let walls paint over the
     // plants stuck flat on them (beach) - so it is off.
     static int tol = -1;
-    if (tol < 0) tol = getenv("EOWRECOMP_VK_EQUAL_TOL") != NULL;
+    if (tol < 0) tol = getenv("ITPRECOMP_VK_EQUAL_TOL") != NULL;
     bool equal_tol = dop == VK_COMPARE_OP_EQUAL && tol;
     if (equal_tol) dop = VK_COMPARE_OP_LESS_OR_EQUAL;
     if (ss_need(SS_DOP, ss.dop == dop)) { ss.dop = dop; vkCmdSetDepthCompareOp(cb, dop); }
@@ -2734,8 +2734,8 @@ static void draw_(CmdRec *r, bool indexed) {
     VkCullModeFlags cm = cull == 1 ? VK_CULL_MODE_FRONT_BIT : cull == 2 ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE;
     if (ss_need(SS_CULL, ss.cull == cm)) { ss.cull = cm; vkCmdSetCullMode(cb, cm); }
     bool ccw = st.poly[1] == 1;
-    static int flipw = -1;  // EOWRECOMP_VK_FLIP_WINDING: invert the front-face mapping (A/B against Metal)
-    if (flipw < 0) flipw = getenv("EOWRECOMP_VK_FLIP_WINDING") != NULL;
+    static int flipw = -1;  // ITPRECOMP_VK_FLIP_WINDING: invert the front-face mapping (A/B against Metal)
+    if (flipw < 0) flipw = getenv("ITPRECOMP_VK_FLIP_WINDING") != NULL;
     bool front_ccw = (ccw != vkey.flip_y) != (flipw != 0);
     VkFrontFace ff = front_ccw ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
     if (ss_need(SS_FF, ss.ff == ff)) { ss.ff = ff; vkCmdSetFrontFace(cb, ff); }
@@ -2746,7 +2746,7 @@ static void draw_(CmdRec *r, bool indexed) {
     {
         float f[3] = {0, 0, 0};
         static int off = -1;
-        if (off < 0) off = getenv("EOWRECOMP_NO_DEPTH_BIAS") != NULL;
+        if (off < 0) off = getenv("ITPRECOMP_NO_DEPTH_BIAS") != NULL;
         bool on = (st.poly[3] & 4) && !off;
         if (on) memcpy(f, st.poly_offset, sizeof f);
         if (equal_tol) { f[1] -= 8; on = true; }  // (see the EQUAL comment above: a few depth ulps nearer)
@@ -2758,7 +2758,7 @@ static void draw_(CmdRec *r, bool indexed) {
     float *vp = st.viewport[0];
     float zn = st.depth_range[0][0], zf = st.depth_range[0][1];
     vp_sx = pass_sx; vp_sy = pass_sy; vp_ox = 0; vp_oy = 0;
-    float tint[8] = {0};  // (per-draw tint, binding 19: no EoW feature uses it yet)
+    float tint[8] = {0};  // (per-draw tint, binding 19: no ITP feature uses it yet)
     // fragment textures are bound before deciding the viewport (tex_sc / tex_wh), rscale depends on the decision:
     // build the vertex set now and the fragment set after the decision (stage_set fills tex_sc for stage 1).
     if (prof) prof_dyn += SDL_GetTicksNS() - prof_td_;
@@ -2804,7 +2804,7 @@ static void draw_(CmdRec *r, bool indexed) {
         }
     }
     {
-        float k = 1.0f;  // (LAS Recomp widened 16:9 camera effects here; EoW's widescreen is not done yet)
+        float k = 1.0f;  // (LAS Recomp widened 16:9 camera effects here; ITP's widescreen is not done yet)
         float vx = vp[0] * vp_sx + vp_ox, vw = vp[2] * vp_sx;
         set_viewport(vx, vp[1] * vp_sy + vp_oy, vw, vp[3] * vp_sy, zn, zf);
         if (g_debug_frame) {
@@ -2962,7 +2962,7 @@ static void debug_draw(Prog *pr, CmdRec *r, bool indexed) {
     LOG(" | vp %.0f %.0f %.0f %.0f | attrs %#x blend %#x ds %02x%02x%02x poly %02x%02x chmask %08x\n", st.viewport[0][0], st.viewport[0][1],
         st.viewport[0][2], st.viewport[0][3], pr->vi->attr_mask, st.color_state[0], st.ds[0], st.ds[1], st.ds[2], st.poly[0], st.poly[1],
         st.channel_mask);
-    if (getenv("EOWRECOMP_DEBUG_DATA")) {  // vertex streams 0-1 and fragment cbufs: the first floats
+    if (getenv("ITPRECOMP_DEBUG_DATA")) {  // vertex streams 0-1 and fragment cbufs: the first floats
         for (int s = 0; s < 2; s++) {
             if (!st.vbuf[s].addr) continue;
             const float *v = (const float *)(uintptr_t)st.vbuf[s].addr;
@@ -3099,7 +3099,7 @@ static void copy_texture(const TexRefRec *src, const TexRefRec *dst, uint64_t fl
     NvnTexture *st_ = (NvnTexture *)(uintptr_t)src->tex, *dt = (NvnTexture *)(uintptr_t)dst->tex;
     if (!st_ || !dt) return;
     vk_end_pass();
-    if (dl_on == 2) renderer_flush();  // (EOWRECOMP_VK_DEVLOST_TRACE=2: each copy its own submission, waited on)
+    if (dl_on == 2) renderer_flush();  // (ITPRECOMP_VK_DEVLOST_TRACE=2: each copy its own submission, waited on)
     gp_mark(vk_cmd(), "copy texture %ux%u -> %ux%u", st_->width, st_->height, dt->width, dt->height);
     dl_note("copy texture %ux%u f%#x -> %ux%u f%#x (%p -> %p)", st_->width, st_->height, st_->format, dt->width, dt->height,
             dt->format, (void *)st_, (void *)dt);
@@ -3568,7 +3568,7 @@ static void exec_list(uint64_t handle, int depth) {
             st.rt.dview = rt->dview;
             st.rt.has_dview = rt->has_dview;
             static int always = -1;
-            if (always < 0) always = getenv("EOWRECOMP_VK_PASS_RESTART") != NULL;
+            if (always < 0) always = getenv("ITPRECOMP_VK_PASS_RESTART") != NULL;
             if (always || memcmp(&prev, &st.rt, sizeof prev)) st.rt_dirty = true;
             break;
         }
@@ -3598,7 +3598,7 @@ static void exec_list(uint64_t handle, int depth) {
         case CMD_CLEAR_COLOR: {
             snap_reason = "clear-color"; snapshots_invalidate(NULL);
             int index = (int)r->x[0];
-            if (getenv("EOWRECOMP_LOG_CLEARS") && index < st.rt.ncolor && st.rt.color[index])
+            if (getenv("ITPRECOMP_LOG_CLEARS") && index < st.rt.ncolor && st.rt.color[index])
                 LOG("[cclear] frame %llu idx %d %ux%u f%#x mask %#x\n", (unsigned long long)renderer_present_count(), index,
                     st.rt.color[index]->width, st.rt.color[index]->height, st.rt.color[index]->format, (uint32_t)r->x[2]);
             if (ct_on() && index < st.rt.ncolor && st.rt.color[index])
@@ -3671,7 +3671,7 @@ static void exec_list(uint64_t handle, int depth) {
             break;
         case CMD_FENCE_SYNC: {
             static int fence_flush = -1;
-            if (fence_flush < 0) fence_flush = getenv("EOWRECOMP_FENCE_FLUSH") ? 1 : 0;
+            if (fence_flush < 0) fence_flush = getenv("ITPRECOMP_FENCE_FLUSH") ? 1 : 0;
             if (fence_flush) renderer_flush();
             extern void nvn_sync_set_seq(uint64_t guest, uint64_t seq);
             if (r->x[1]) nvn_sync_set_seq(r->x[1], renderer_fence_seq());
@@ -3694,10 +3694,10 @@ static void exec_list(uint64_t handle, int depth) {
             static uint64_t *prev_out;  // (frame pacing: the pair's start)
             if (mode == 0 || mode == 2) out[1] = pace_end_counter(prev_out, out, out[1]);
             prev_out = out;
-            {   // (test) EOWRECOMP_TEST_COUNTER_DELAY_MS=<ms>: stall the host after a frame's first counter - a slow CPU
+            {   // (test) ITPRECOMP_TEST_COUNTER_DELAY_MS=<ms>: stall the host after a frame's first counter - a slow CPU
                 static double delay = -1;
                 static uint64_t delayed_frame = ~0ull;
-                if (delay < 0) delay = getenv("EOWRECOMP_TEST_COUNTER_DELAY_MS") ? atof(getenv("EOWRECOMP_TEST_COUNTER_DELAY_MS")) : 0;
+                if (delay < 0) delay = getenv("ITPRECOMP_TEST_COUNTER_DELAY_MS") ? atof(getenv("ITPRECOMP_TEST_COUNTER_DELAY_MS")) : 0;
                 if (delay > 0 && vk_frame_counter() != delayed_frame) {
                     delayed_frame = vk_frame_counter();
                     SDL_DelayPrecise((Uint64)(delay * 1e6));
@@ -3736,7 +3736,7 @@ void backend_execute(uint64_t handle) {
     PROF_ADD(prof_exec);
     if (prof) cum_exec += SDL_GetTicksNS() - prof_t0_;
     static int sync_submit = -1;
-    if (sync_submit < 0) sync_submit = getenv("EOWRECOMP_SYNC_SUBMIT") ? 1 : 0;
+    if (sync_submit < 0) sync_submit = getenv("ITPRECOMP_SYNC_SUBMIT") ? 1 : 0;
     if (sync_submit) renderer_flush();
     else renderer_submit();
 }

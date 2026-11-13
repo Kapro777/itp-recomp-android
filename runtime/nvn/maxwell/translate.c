@@ -24,7 +24,7 @@
 
 uint64_t maxwell_gmem_base, maxwell_gmem_size;
 // Iteration limit of a branching shader's dispatch loop (a mistranslated branch can't hang the GPU forever).
-// EOWRECOMP_SHADER_GUARD overrides it (backends read it): a small one shows which shaders loop.
+// ITPRECOMP_SHADER_GUARD overrides it (backends read it): a small one shows which shaders loop.
 uint32_t maxwell_loop_guard = 100000;
 const uint8_t *maxwell_dbg_code;
 uint32_t maxwell_dbg_pc;
@@ -862,7 +862,7 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         sp(&c->body, c->branchy ? "    exit_now = true; break;\n" : "    break;\n");
     } else if (OPM(0xe330000000000000ull, 0xfff0000000000000ull)) {  // KIL
         c->info->uses_discard = true;
-        if (getenv("EOWRECOMP_NO_DISCARD")) {
+        if (getenv("ITPRECOMP_NO_DISCARD")) {
         } else if (!c->glsl) sp(&c->body, "    discard_fragment();\n");
         else if (c->stage == STAGE_FRAGMENT) sp(&c->body, "    discard;\n");
         else sp(&c->body, "    /* kil */\n");  // GLSL has discard in fragment shaders only
@@ -1430,7 +1430,7 @@ static void emit_insn(Ctx *c, uint64_t w, uint32_t pc) {
         int nw = size == 5 ? 2 : size >= 6 ? 4 : 1;
         if (c->glsl && c->stage == STAGE_COMPUTE) {
             // Compute (Vulkan): the guest heap is host memory across PCIe on a discrete GPU, and a shader storing to
-            // it in a loop crawls (the little chain chomps in Madam MeowMeow's house: ~4 ms a dispatch, ~0.07 ms without
+            // it in a loop crawls (the little chain chomps in Madam MitpMitp's house: ~4 ms a dispatch, ~0.07 ms without
             // the heap stores). The dispatch's storage buffers are copied to a device-local buffer (gfast_, address
             // table gmap: exec.c gfast_prepare) and back after it: loads and stores inside them use that copy.
             // Anything outside the table goes to the heap as before.
@@ -2125,7 +2125,7 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
     // translate
     bool dbg = maxwell_dbg_code && blob == maxwell_dbg_code && stage == STAGE_FRAGMENT;
     static int annotate = -1;
-    if (annotate < 0) annotate = getenv("EOWRECOMP_SAVE_MSL") != NULL;
+    if (annotate < 0) annotate = getenv("ITPRECOMP_SAVE_MSL") != NULL;
     // a loop ends after its backward branch: its end is a block boundary (index of the first instruction after it)
     uint32_t loop_e[MAX_LOOPS];
     for (int k = 0; k < nloops && forward; k++) {
@@ -2145,7 +2145,7 @@ ShaderInfo *maxwell_translate(const uint8_t *blob, size_t max_size, int stage, c
             if (loop_h[k] == loop_h[m] && k != m) forward = false;
         }
     c->branchy = any_branch;
-    c->fwd = any_branch && forward && !getenv("EOWRECOMP_NO_FWD_SHADERS");
+    c->fwd = any_branch && forward && !getenv("ITPRECOMP_NO_FWD_SHADERS");
     bool fwd_first = true;
     for (size_t i = 0; i < end && !c->fail; i++) {
         if (i % 4 == 0) continue;

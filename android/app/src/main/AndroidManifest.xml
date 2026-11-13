@@ -39,7 +39,7 @@
         <!-- lets Android's CPU profiler (simpleperf) attach to release builds over adb; no other effect -->
         <profileable android:shell="true" />
         <activity
-            android:name=".EowActivity"
+            android:name=".ItpActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
             android:exported="true"
             android:launchMode="singleTask"

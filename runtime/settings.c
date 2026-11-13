@@ -9,10 +9,10 @@
 
 #define SETTINGS_FILE settings_file()
 
-// EOWRECOMP_SETTINGS=<path>: another settings file (test runs never touch the player's eowrecomp.ini)
+// ITPRECOMP_SETTINGS=<path>: another settings file (test runs never touch the player's itprecomp.ini)
 static const char *settings_file(void) {
-    const char *e = getenv("EOWRECOMP_SETTINGS");
-    return e && *e ? e : "eowrecomp.ini";
+    const char *e = getenv("ITPRECOMP_SETTINGS");
+    return e && *e ? e : "itprecomp.ini";
 }
 
 Settings g_settings = {
@@ -120,7 +120,7 @@ void settings_load(void) {
 void settings_save(void) {
     FILE *f = fopen(SETTINGS_FILE, "w");
     if (!f) { LOG("[settings] cannot write %s\n", SETTINGS_FILE); return; }
-    fprintf(f, "# EoWRecomp settings (edited from the in-game menu: F1, Esc, or Minus+Plus on a controller)\n");
+    fprintf(f, "# ITPRecomp settings (edited from the in-game menu: F1, Esc, or Minus+Plus on a controller)\n");
     fprintf(f, "aspect = %s\n", g_settings.aspect == ASPECT_ORIGINAL ? "original" : "unlocked");
     fprintf(f, "fullscreen = %d\n", g_settings.fullscreen);
     fprintf(f, "volume = %.2f\n", g_settings.volume);

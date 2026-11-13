@@ -30,7 +30,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_cb(VkDebugUtilsMessageSeverityFlagBi
     return VK_FALSE;
 }
 
-// EOWRECOMP_VK_VALIDATION=1: Khronos validation layer (MSYS2 package vulkan-validation-layers)
+// ITPRECOMP_VK_VALIDATION=1: Khronos validation layer (MSYS2 package vulkan-validation-layers)
 static void create_instance(void) {
 #ifdef VK_NO_PROTOTYPES
     if (volkInitialize() != VK_SUCCESS) FATAL("no Vulkan driver\n");
@@ -46,11 +46,11 @@ static void create_instance(void) {
     ext[n_ext++] = VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME;
     flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
-    bool validate = getenv("EOWRECOMP_VK_VALIDATION") != NULL;
+    bool validate = getenv("ITPRECOMP_VK_VALIDATION") != NULL;
     if (validate) ext[n_ext++] = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
     const char *layers[] = {"VK_LAYER_KHRONOS_validation"};
-    VkApplicationInfo app = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "EoWRecomp",
-                             .pEngineName = "EoWRecomp", .apiVersion = VK_API_VERSION_1_3};
+    VkApplicationInfo app = {.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pApplicationName = "ITPRecomp",
+                             .pEngineName = "ITPRecomp", .apiVersion = VK_API_VERSION_1_3};
     VkInstanceCreateInfo ci = {.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .flags = flags, .pApplicationInfo = &app,
                                .enabledExtensionCount = n_ext, .ppEnabledExtensionNames = ext,
                                .enabledLayerCount = validate ? 1 : 0, .ppEnabledLayerNames = layers};
@@ -84,14 +84,14 @@ static bool has_ext(VkExtensionProperties *e, uint32_t n, const char *name) {
     return false;
 }
 
-// Discrete GPU first (EOWRECOMP_GPU=<index> picks one), needs Vulkan 1.3 and a queue that can present.
+// Discrete GPU first (ITPRECOMP_GPU=<index> picks one), needs Vulkan 1.3 and a queue that can present.
 static void pick_device(void) {
     uint32_t n = 0;
     vkEnumeratePhysicalDevices(g_vk.inst, &n, NULL);
     if (!n) FATAL("no Vulkan device\n");
     VkPhysicalDevice *pd = calloc(n, sizeof *pd);
     vkEnumeratePhysicalDevices(g_vk.inst, &n, pd);
-    int want = getenv("EOWRECOMP_GPU") ? atoi(getenv("EOWRECOMP_GPU")) : -1, best = -1, best_score = -1;
+    int want = getenv("ITPRECOMP_GPU") ? atoi(getenv("ITPRECOMP_GPU")) : -1, best = -1, best_score = -1;
     for (uint32_t i = 0; i < n; i++) {
         VkPhysicalDeviceProperties p;
         vkGetPhysicalDeviceProperties(pd[i], &p);
@@ -279,8 +279,8 @@ static VkPresentModeKHR present_mode(void) {
     // MAILBOX by default: the game paces itself (vi.c's emulated 60 Hz vsync), and with FIFO every submission
     // queued behind the one waiting for a window image, so the game's fence waits followed the presentation engine:
     // a throttled / captured / busy compositor slowed the whole game (4-21 fps with the GPU mostly idle; mailbox:
-    // 60). No tearing. EOWRECOMP_VK_PRESENT=fifo|immediate|mailbox to choose.
-    const char *e = getenv("EOWRECOMP_VK_PRESENT");
+    // 60). No tearing. ITPRECOMP_VK_PRESENT=fifo|immediate|mailbox to choose.
+    const char *e = getenv("ITPRECOMP_VK_PRESENT");
     VkPresentModeKHR want = !e || !strcmp(e, "mailbox") ? VK_PRESENT_MODE_MAILBOX_KHR
                           : !strcmp(e, "immediate") ? VK_PRESENT_MODE_IMMEDIATE_KHR : VK_PRESENT_MODE_FIFO_KHR;
     uint32_t n = 0;
@@ -310,9 +310,9 @@ static void create_swapchain(void) {
     // Pre-rotation: the images in the panel's own (portrait) orientation with its transform, everything drawn into
     // them turned (vk_sc_rect, the present and UI vertex shaders). Otherwise the compositor turns the whole landscape
     // layer with the GPU at every present: ~13% of the GPU's time on a Snapdragon 865 (LASRecomp-Android-Plus).
-    // EOWRECOMP_PRETRANSFORM=0: the system turns them.
+    // ITPRECOMP_PRETRANSFORM=0: the system turns them.
     static int pre = -1;
-    if (pre < 0) pre = getenv("EOWRECOMP_PRETRANSFORM") ? atoi(getenv("EOWRECOMP_PRETRANSFORM")) != 0 : 1;
+    if (pre < 0) pre = getenv("ITPRECOMP_PRETRANSFORM") ? atoi(getenv("ITPRECOMP_PRETRANSFORM")) != 0 : 1;
     if (pre && (caps.currentTransform == VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
                 caps.currentTransform == VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR)) {
         xf = caps.currentTransform;
@@ -454,7 +454,7 @@ bool vk_frame_begin(const float clear[4]) {
     if (!g_vk.swapchain || (uint32_t)w != g_vk.sc_extent.width || (uint32_t)h != g_vk.sc_extent.height) recreate_swapchain();
     if (!g_vk.swapchain) return false;
     static int trace = -1;
-    if (trace < 0) trace = getenv("EOWRECOMP_VK_TRACE") != NULL;
+    if (trace < 0) trace = getenv("ITPRECOMP_VK_TRACE") != NULL;
     if (trace) LOG("[vk] frame begin %dx%d (swapchain %ux%u)\n", w, h, g_vk.sc_extent.width, g_vk.sc_extent.height);
     slot = (slot + 1) % FRAMES;
     if (!acquire_sem[slot]) acquire_sem[slot] = binary_semaphore();
@@ -628,14 +628,14 @@ void backend_present(NvnTexture *t) {
         memcpy(g_shot_crop, crop, sizeof crop);
         vk_present_draw(cb, b, (float)vx, (float)vy, (float)vw, (float)vh, pv);
         static long menu_at = -1;
-        if (menu_at < 0) menu_at = getenv("EOWRECOMP_MENU_AT") ? atol(getenv("EOWRECOMP_MENU_AT")) : 0;
+        if (menu_at < 0) menu_at = getenv("ITPRECOMP_MENU_AT") ? atol(getenv("ITPRECOMP_MENU_AT")) : 0;
         if (menu_at && (long)total_frames + 1 == menu_at) { extern void menu_test_open(void); menu_test_open(); }
         menu_render((void *)cb, g_vk.sc_extent.width, g_vk.sc_extent.height);
         static long win_shot = -1;
-        if (win_shot < 0) win_shot = getenv("EOWRECOMP_WINDOW_SHOT") ? atol(getenv("EOWRECOMP_WINDOW_SHOT")) : 0;
+        if (win_shot < 0) win_shot = getenv("ITPRECOMP_WINDOW_SHOT") ? atol(getenv("ITPRECOMP_WINDOW_SHOT")) : 0;
         bool shot = win_shot && (long)total_frames + 1 == win_shot;
-        vk_frame_end(shot ? getenv("EOWRECOMP_SHOT_PATH") ? getenv("EOWRECOMP_SHOT_PATH") : "build/window.png" : NULL);
-        if (shot && getenv("EOWRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
+        vk_frame_end(shot ? getenv("ITPRECOMP_SHOT_PATH") ? getenv("ITPRECOMP_SHOT_PATH") : "build/window.png" : NULL);
+        if (shot && getenv("ITPRECOMP_EXIT_AFTER_SHOT")) { fflush(stderr); _exit(0); }
     } else {
         renderer_submit();
     }
@@ -649,32 +649,32 @@ void backend_present(NvnTexture *t) {
     extern void input_frame(uint64_t frame);
     input_frame(total_frames);
     static long slow_ms = -1;
-    if (slow_ms < 0) slow_ms = getenv("EOWRECOMP_SLOW_FRAME_MS") ? atol(getenv("EOWRECOMP_SLOW_FRAME_MS")) : 0;
-    static long slow_until = -1;  // EOWRECOMP_SLOW_FRAME_UNTIL=<frame>: the stall ends there (frame pacing recovery tests)
-    if (slow_until < 0) slow_until = getenv("EOWRECOMP_SLOW_FRAME_UNTIL") ? atol(getenv("EOWRECOMP_SLOW_FRAME_UNTIL")) : 0;
+    if (slow_ms < 0) slow_ms = getenv("ITPRECOMP_SLOW_FRAME_MS") ? atol(getenv("ITPRECOMP_SLOW_FRAME_MS")) : 0;
+    static long slow_until = -1;  // ITPRECOMP_SLOW_FRAME_UNTIL=<frame>: the stall ends there (frame pacing recovery tests)
+    if (slow_until < 0) slow_until = getenv("ITPRECOMP_SLOW_FRAME_UNTIL") ? atol(getenv("ITPRECOMP_SLOW_FRAME_UNTIL")) : 0;
     if (slow_ms > 0 && total_frames > 2600 && (!slow_until || (long)total_frames < slow_until)) SDL_Delay((Uint32)slow_ms);
     extern void fnprof_frame(uint64_t frame);
     fnprof_frame(total_frames);
-    extern void reboot_test_frame(uint64_t frame);  // runtime/main.c (EOWRECOMP_REBOOT_AT)
+    extern void reboot_test_frame(uint64_t frame);  // runtime/main.c (ITPRECOMP_REBOOT_AT)
     reboot_test_frame(total_frames);
     extern void vk_level_change_check(void);
     vk_level_change_check();
     static long shot_every = -1;
-    if (shot_every < 0) { const char *e = getenv("EOWRECOMP_SCREENSHOT_EVERY"); shot_every = e ? atol(e) : 0; }
+    if (shot_every < 0) { const char *e = getenv("ITPRECOMP_SCREENSHOT_EVERY"); shot_every = e ? atol(e) : 0; }
     extern bool g_debug_frame;
     static long debug_at = -1;
-    if (debug_at < 0) { const char *e = getenv("EOWRECOMP_DEBUG_FRAME"); debug_at = e ? atol(e) : 0; }
+    if (debug_at < 0) { const char *e = getenv("ITPRECOMP_DEBUG_FRAME"); debug_at = e ? atol(e) : 0; }
     extern volatile int g_debug_frame_request;
     if (g_debug_frame_request) { g_debug_frame_request = 0; debug_at = (long)total_frames + 1; }
-    // EOWRECOMP_DEBUG_FRAMES=<n> (with EOWRECOMP_DEBUG_FRAME / F9): dump n consecutive frames (build/pass_<frame>_NNN.png)
+    // ITPRECOMP_DEBUG_FRAMES=<n> (with ITPRECOMP_DEBUG_FRAME / F9): dump n consecutive frames (build/pass_<frame>_NNN.png)
     static long debug_n = -1;
-    if (debug_n < 0) { const char *e = getenv("EOWRECOMP_DEBUG_FRAMES"); debug_n = e && atol(e) > 1 ? atol(e) : 1; }
+    if (debug_n < 0) { const char *e = getenv("ITPRECOMP_DEBUG_FRAMES"); debug_n = e && atol(e) > 1 ? atol(e) : 1; }
     g_debug_frame = debug_at && total_frames >= (uint64_t)debug_at && total_frames < (uint64_t)debug_at + (uint64_t)debug_n;
-    {   // EOWRECOMP_GPUPROF_AT=<frame>[,<frame>...]: GPU time per pass of those frames ("[gpuprof]" in the log)
+    {   // ITPRECOMP_GPUPROF_AT=<frame>[,<frame>...]: GPU time per pass of those frames ("[gpuprof]" in the log)
         extern bool g_gpuprof_frame;
         extern void vk_gpuprof_report(void);
         if (g_gpuprof_frame) { g_gpuprof_frame = false; vk_gpuprof_report(); }
-        const char *e = getenv("EOWRECOMP_GPUPROF_AT");
+        const char *e = getenv("ITPRECOMP_GPUPROF_AT");
         for (const char *p = e; p && *p;) {
             long at = strtol(p, (char **)&p, 10);
             if (at == (long)total_frames) { g_gpuprof_frame = true; break; }
@@ -682,13 +682,13 @@ void backend_present(NvnTexture *t) {
         }
     }
     if (g_debug_frame) LOG("===== debug frame %llu =====\n", (unsigned long long)total_frames);
-    {   // EOWRECOMP_SHOT_AT=<frame>,<frame>,... (ascending): the game image at those frames -> build/frames/frame_N.png
+    {   // ITPRECOMP_SHOT_AT=<frame>,<frame>,... (ascending): the game image at those frames -> build/frames/frame_N.png
         static const char *next;
         static int init;
-        if (!init) { init = 1; next = getenv("EOWRECOMP_SHOT_AT"); if (next) mkdir("build/frames", 0755); }
+        if (!init) { init = 1; next = getenv("ITPRECOMP_SHOT_AT"); if (next) mkdir("build/frames", 0755); }
         while (next && *next) {
             long at = strtol(next, (char **)&next, 10);
-            if ((long)total_frames < at) { while (next > getenv("EOWRECOMP_SHOT_AT") && next[-1] != ',') next--; break; }
+            if ((long)total_frames < at) { while (next > getenv("ITPRECOMP_SHOT_AT") && next[-1] != ',') next--; break; }
             if ((long)total_frames == at) {
                 char path[256];
                 snprintf(path, sizeof path, "build/frames/frame_%05llu.png", (unsigned long long)total_frames);
@@ -698,19 +698,19 @@ void backend_present(NvnTexture *t) {
         }
     }
     static long shot_from = -1;
-    if (shot_from < 0) { const char *e = getenv("EOWRECOMP_SCREENSHOT_FROM"); shot_from = e ? atol(e) : 0; }
+    if (shot_from < 0) { const char *e = getenv("ITPRECOMP_SCREENSHOT_FROM"); shot_from = e ? atol(e) : 0; }
     if (shot_every && total_frames % shot_every == 0 && (long)total_frames >= shot_from) {
         char path[256];
         if (shot_from) mkdir("build/frames", 0755);
         snprintf(path, sizeof path, shot_from ? "build/frames/frame_%05llu.png" : "build/frame_%05llu.png",
                  (unsigned long long)total_frames);
         renderer_save_texture_tex(b, path);
-        // a series (SCREENSHOT_FROM) runs on until EOWRECOMP_WINDOW_SHOT exits
-        if (getenv("EOWRECOMP_EXIT_AFTER_SHOT") && !shot_from) { fflush(stderr); _exit(0); }
+        // a series (SCREENSHOT_FROM) runs on until ITPRECOMP_WINDOW_SHOT exits
+        if (getenv("ITPRECOMP_EXIT_AFTER_SHOT") && !shot_from) { fflush(stderr); _exit(0); }
     }
     double now = SDL_GetTicks() / 1000.0;
     static double fps_iv = -1, prev_present, max_gap;
-    if (fps_iv < 0) fps_iv = getenv("EOWRECOMP_FPS_INTERVAL") ? atof(getenv("EOWRECOMP_FPS_INTERVAL")) : 2.0;
+    if (fps_iv < 0) fps_iv = getenv("ITPRECOMP_FPS_INTERVAL") ? atof(getenv("ITPRECOMP_FPS_INTERVAL")) : 2.0;
     if (prev_present > 0 && now - prev_present > max_gap) max_gap = now - prev_present;
     prev_present = now;
     if (now - last_fps_time >= fps_iv) {
@@ -732,7 +732,7 @@ void vk_shaders_init(void);
 // teardown (driver / validation-layer threads can stall it for minutes while the game's threads still run).
 static void quick_exit_handler(void) {
     static int trace = -1;
-    if (trace < 0) trace = getenv("EOWRECOMP_VK_TRACE") != NULL;
+    if (trace < 0) trace = getenv("ITPRECOMP_VK_TRACE") != NULL;
     if (trace) LOG("[vk] exit: waiting for the GPU\n");
     if (g_vk.dev) {
         vkDeviceWaitIdle(g_vk.dev);
@@ -771,25 +771,25 @@ void ui_window_init(void) {
     use_bundled_driver();
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) FATAL("SDL_Init: %s\n", SDL_GetError());
     int win_w = 1280, win_h = 720;
-    if (getenv("EOWRECOMP_WINDOW")) sscanf(getenv("EOWRECOMP_WINDOW"), "%dx%d", &win_w, &win_h);
+    if (getenv("ITPRECOMP_WINDOW")) sscanf(getenv("ITPRECOMP_WINDOW"), "%dx%d", &win_w, &win_h);
     SDL_WindowFlags wflags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    if (getenv("EOWRECOMP_HIDDEN")) wflags |= SDL_WINDOW_HIDDEN;
+    if (getenv("ITPRECOMP_HIDDEN")) wflags |= SDL_WINDOW_HIDDEN;
 #ifdef __ANDROID__
     wflags |= SDL_WINDOW_FULLSCREEN;  // (immersive: no status / navigation bars over the game)
 #endif
     {   // scripted test runs (user input ignored: runtime/hle/input.c input_user_blocked) open without taking the
         // keyboard focus from whatever the player is doing
-        const char *v = getenv("EOWRECOMP_NO_USER_INPUT");
-        bool scripted = v ? atoi(v) != 0 : (getenv("EOWRECOMP_INPUT") || getenv("EOWRECOMP_DOORJUMP_TEST") || getenv("EOWRECOMP_PLACE") ||
-                                            getenv("EOWRECOMP_HOST_INPUT") || getenv("EOWRECOMP_BIND_TEST"));
+        const char *v = getenv("ITPRECOMP_NO_USER_INPUT");
+        bool scripted = v ? atoi(v) != 0 : (getenv("ITPRECOMP_INPUT") || getenv("ITPRECOMP_DOORJUMP_TEST") || getenv("ITPRECOMP_PLACE") ||
+                                            getenv("ITPRECOMP_HOST_INPUT") || getenv("ITPRECOMP_BIND_TEST"));
         if (scripted) SDL_SetHint(SDL_HINT_WINDOW_ACTIVATE_WHEN_SHOWN, "0");
     }
-    window = SDL_CreateWindow("EoWRecomp", win_w, win_h, wflags);
+    window = SDL_CreateWindow("ITPRecomp", win_w, win_h, wflags);
     if (!window) FATAL("SDL_CreateWindow: %s\n", SDL_GetError());
     SDL_AddEventWatch(lifecycle_watch, NULL);
     rt_window_icon(window);
     // the Fullscreen setting applies from the start screen on (not only once the game runs); test windows stay windows
-    if (g_settings.fullscreen && !getenv("EOWRECOMP_WINDOW") && !getenv("EOWRECOMP_HIDDEN")) SDL_SetWindowFullscreen(window, true);
+    if (g_settings.fullscreen && !getenv("ITPRECOMP_WINDOW") && !getenv("ITPRECOMP_HIDDEN")) SDL_SetWindowFullscreen(window, true);
     create_instance();
     if (!SDL_Vulkan_CreateSurface(window, g_vk.inst, NULL, &g_vk.surface)) FATAL("SDL_Vulkan_CreateSurface: %s\n", SDL_GetError());
     pick_device();

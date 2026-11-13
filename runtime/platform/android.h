@@ -1,4 +1,4 @@
-// What only the Android app has (runtime/platform/android_jni.c, with EowActivity.java): the system's folder picker
+// What only the Android app has (runtime/platform/android_jni.c, with ItpActivity.java): the system's folder picker
 // and the player's game package read through the documents it hands out (no file paths there: file descriptors).
 #pragma once
 #include <stdbool.h>

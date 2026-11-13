@@ -1,6 +1,6 @@
-// EoW Recomp for Android: libmain.so (the runtime) + libSDL3.so, built by app/CMakeLists.txt (needs
-// tools/android/build_deps.sh first). No game code in here: libeowgame.so is built from the player's own game files
-// by tools/android/build_game.sh and packed into a personal APK (-PeowGameLib=<dir with arm64-v8a/libeowgame.so>).
+// ITP Recomp for Android: libmain.so (the runtime) + libSDL3.so, built by app/CMakeLists.txt (needs
+// tools/android/build_deps.sh first). No game code in here: libitpgame.so is built from the player's own game files
+// by tools/android/build_game.sh and packed into a personal APK (-PitpGameLib=<dir with arm64-v8a/libitpgame.so>).
 // (After LASRecomp-Android-Plus, MIT.)
 plugins {
     id 'com.android.application'
@@ -17,16 +17,16 @@ if (onDevice && !(new File(ondev, 'stage/jniLibs/arm64-v8a/libzig.so').exists() 
     throw new GradleException('-PonDeviceBuild: run tools/android/ondevice/build_all.sh first')
 
 android {
-    namespace 'com.eowrecomp.android'
+    namespace 'com.itprecomp.android'
     compileSdk 36
     ndkVersion '27.2.12479018'
 
     defaultConfig {
-        applicationId 'com.eowrecomp.android'
+        applicationId 'com.itprecomp.android'
         minSdk 30          // Android 11: Vulkan 1.1+, AAudio, MAP_FIXED_NOREPLACE kernels
         targetSdk 36
-        versionCode((project.findProperty('eowVersionCode') ?: '1') as int)
-        versionName project.findProperty('eowVersionName') ?: '0.1.0'
+        versionCode((project.findProperty('itpVersionCode') ?: '1') as int)
+        versionName project.findProperty('itpVersionName') ?: '0.1.0'
         ndk {
             abiFilters 'arm64-v8a'
         }
@@ -77,9 +77,9 @@ android {
     sourceSets {
         main {
             java.srcDirs += [sdl]
-            assets.srcDirs += ["$buildDir/generated/eow-assets"]
+            assets.srcDirs += ["$buildDir/generated/itp-assets"]
             // a personal build with the game code inside (tools/android/build_game.sh --apk)
-            if (project.hasProperty('eowGameLib')) jniLibs.srcDirs += [project.property('eowGameLib')]
+            if (project.hasProperty('itpGameLib')) jniLibs.srcDirs += [project.property('itpGameLib')]
             if (onDevice) {
                 jniLibs.srcDirs += ["$ondev/stage/jniLibs"]
                 assets.srcDirs += ["$ondev/assets"]
@@ -102,19 +102,19 @@ android {
 }
 
 // What the app ships besides code (runtime/paths.c android_resources): the start screen fonts and the icon
-tasks.register('eowAssets', Sync) {  // (Sync: a file gone from the sources goes from the APK too)
+tasks.register('itpAssets', Sync) {  // (Sync: a file gone from the sources goes from the APK too)
     from('../../third_party/fonts') { include '**/*.ttf'; eachFile { path = name }; includeEmptyDirs = false }
     from('../../docs/icon/icon_1024.png') { rename { 'icon.png' } }
-    into "$buildDir/generated/eow-assets"
+    into "$buildDir/generated/itp-assets"
 }
-preBuild.dependsOn eowAssets
+preBuild.dependsOn itpAssets
 
 // The on-phone build's kit and asset archive again from this checkout's sources (quick: python and zig stay built), so
 // the headers and the generator inside the APK are the ones its game code id (tools/android/gamelib_id.sh) is made from
 if (onDevice) {
-    tasks.register('eowOnDeviceAssets', Exec) {
+    tasks.register('itpOnDeviceAssets', Exec) {
         workingDir file('../..')
         commandLine 'bash', '-c', 'tools/android/ondevice/build_cckit.sh && tools/android/ondevice/make_assets.sh'
     }
-    preBuild.dependsOn eowOnDeviceAssets
+    preBuild.dependsOn itpOnDeviceAssets
 }

@@ -1,4 +1,4 @@
-# GAP: o que o EoW usa vs. o que o runtime implementa
+# GAP: o que o ITP usa vs. o que o runtime implementa
 
 Gerado por medição: `tools/venv/bin/python tools/inventory.py extracted/exefs [--lift]` (as tabelas abaixo são a
 saída da ferramenta, de 2026-10-19). Rodar de novo depois de mudanças no runtime.

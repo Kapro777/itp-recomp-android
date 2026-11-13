@@ -1,4 +1,4 @@
-# Contributing to EoWRecomp
+# Contributing to ITPRecomp
 
 Bug reports, testing on different hardware and code contributions are welcome. This project is developed mostly with
 AI; contributions written by hand, with AI assistance or anything in between are equally welcome - what matters is
@@ -24,7 +24,7 @@ clips in bug reports are fine.
 
 - Build cleanly on your platform. If you touch shared rendering code, say which backend you tested.
 - A fix isn't verified until it has been seen working (screenshot, log or test). Scripted runs (`tools/shot.sh`,
-  `EOWRECOMP_*` environment hooks) save a screenshot at a given frame.
+  `ITPRECOMP_*` environment hooks) save a screenshot at a given frame.
 
 ## License
 

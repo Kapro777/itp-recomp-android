@@ -1,5 +1,5 @@
 #!/bin/bash
-# Windows x86-64 build from Linux (tools/windows/build.sh): fetches what eowrecomp.exe links against into
+# Windows x86-64 build from Linux (tools/windows/build.sh): fetches what itprecomp.exe links against into
 # build/win/deps - MSYS2 UCRT64 packages (SDL3, shaderc with its glslang / SPIRV-Tools DLLs, the Vulkan headers and
 # loader import library, Vulkan Memory Allocator, the GCC runtime DLLs those need) and BtbN's LGPL FFmpeg shared build.
 # Versions are pinned; each file is fetched once (build/win/dl) and extracted again on every run.
